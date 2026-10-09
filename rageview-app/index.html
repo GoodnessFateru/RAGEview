@@ -1,0 +1,254 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>RAGEview</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#fff;--card:#fff;--text:#000;--muted:#666;--line:#D9D9D9;--navy:#000;--red:#000;--soft:#F0F0F0;--bar:#000;
+box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+@media(prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#000;--card:#000;--text:#fff;--muted:#aaa;--line:#333;--navy:#fff;--red:#fff;--soft:#222;--bar:#fff}}
+:root[data-theme="dark"]{--bg:#000;--card:#000;--text:#fff;--muted:#aaa;--line:#333;--navy:#fff;--red:#fff;--soft:#222;--bar:#fff}
+html{scroll-padding-top:env(safe-area-inset-top,0px)}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--text);font-family:'Montserrat','Segoe UI',Helvetica,Arial,sans-serif;font-size:15px;line-height:1.55}
+header{background:var(--card);border-bottom:3px solid var(--red);padding:14px 20px;display:flex;flex-wrap:wrap;gap:14px;align-items:center;justify-content:space-between}
+.logo{font-weight:800;font-size:24px;letter-spacing:.5px;color:var(--navy)}
+.logo span{font-weight:400;color:var(--red)}
+select{font:inherit;font-weight:600;padding:9px 12px;border:1px solid var(--line);border-radius:6px;background:var(--bg);color:var(--text);min-width:200px}
+nav{display:flex;gap:4px;padding:0 20px;background:var(--card);border-bottom:1px solid var(--line);overflow-x:auto}
+nav button{font:inherit;font-weight:600;border:0;background:none;color:var(--muted);padding:13px 14px;cursor:pointer;border-bottom:3px solid transparent;white-space:nowrap}
+nav button[aria-selected=true]{color:var(--navy);border-color:var(--navy)}
+button:focus-visible,select:focus-visible{outline:3px solid var(--red);outline-offset:2px}
+main{max-width:1000px;margin:0 auto;padding:20px}
+.note{font-size:13px;color:var(--muted);margin:0 0 14px}
+.chips{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:16px}
+.chip{font:inherit;font-size:13px;font-weight:600;padding:5px 12px;border-radius:99px;border:1px solid var(--line);background:var(--card);color:var(--muted);cursor:pointer}
+.chip[aria-pressed=true]{background:var(--navy);border-color:var(--navy);color:var(--bg)}
+.kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:12px;margin-bottom:16px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:8px;padding:16px;margin-bottom:16px}
+.kpi b{display:block;font-size:28px;font-weight:800;color:var(--navy)}
+.kpi small{color:var(--muted);font-weight:500}
+h2{font-size:17px;margin:0 0 4px;font-weight:700}
+.say{font-size:15px;border-left:4px solid var(--red);padding:4px 0 4px 12px;margin:0 0 10px}
+.scroll{overflow-x:auto}
+table{width:100%;border-collapse:collapse;font-size:14px}
+th,td{text-align:left;padding:9px 8px;border-bottom:1px solid var(--line);white-space:nowrap}
+th{color:var(--muted);font-weight:600;font-size:13px}
+td.n{text-align:right;font-variant-numeric:tabular-nums}th.n{text-align:right}
+.tag{font-size:12px;font-weight:700;padding:2px 8px;border-radius:4px;background:var(--soft);color:var(--navy)}
+.tag.ad{background:var(--text);color:var(--bg)}
+.tl{list-style:none;margin:0;padding:0 0 0 18px;border-left:2px solid var(--line)}
+.tl li{position:relative;padding:0 0 16px 16px}
+.tl li::before{content:"";position:absolute;left:-26px;top:5px;width:12px;height:12px;border-radius:50%;background:var(--navy);border:2px solid var(--card)}
+.tl li.ad::before{background:var(--card);border-color:var(--text)}
+.tl small{color:var(--muted);display:block}
+svg{width:100%;height:auto;display:block}
+svg text{fill:var(--muted);font-family:inherit;font-size:11px}
+.rect{fill:var(--bar)}
+@media(max-width:560px){main{padding:14px}.kpi b{font-size:24px}}
+</style>
+</head>
+<body>
+<header>
+  <div class="logo">RAGE<span>view</span></div>
+  <label>
+    <select id="brand" aria-label="Choose a brand"></select>
+  </label>
+  <button id="manage" class="chip" type="button">Brands &amp; accounts</button>
+  <button id="theme" class="chip" type="button"></button>
+</header>
+<nav role="tablist" id="tabs">
+  <button role="tab" data-t="accounts" aria-selected="true">Brands &amp; accounts</button>
+  <button role="tab" data-t="daily" aria-selected="false">Daily review</button>
+  <button role="tab" data-t="formats" aria-selected="false">By format</button>
+  <button role="tab" data-t="overview" aria-selected="false">Month at a glance</button>
+  <button role="tab" data-t="posts" aria-selected="false">Posts and ads</button>
+  <button role="tab" data-t="timeline" aria-selected="false">Brand timeline</button>
+  <button role="tab" data-t="report" aria-selected="false">Monthly report</button>
+  
+</nav>
+<main>
+  <p class="note">Welcome to RAGEview. Start under “Brands &amp; accounts”: name your first brand, then link its accounts. Numbers appear after each account's first daily update.</p>
+  <div class="chips" id="chips" role="group" aria-label="Filter by platform"></div>
+  <div id="view"></div>
+</main>
+<script>
+const fmt=n=>n.toLocaleString('en-US');
+function rng(s){return function(){s|=0;s=s+0x6D2B79F5|0;let t=Math.imul(s^s>>>15,1|s);t=t+Math.imul(t^t>>>7,61|t)^t;return((t^t>>>14)>>>0)/4294967296}}
+const BRANDS=[
+ {n:'Your first brand',p:[]},
+ 
+ 
+ 
+];
+const slug=n=>'@'+n.toLowerCase().replace(/[^a-z]/g,'');
+const ACC=BRANDS.map(b=>b.p.map(p=>({id:p+slug(b.n),pl:p,h:slug(b.n),st:'Connected'}))),CACHE={};
+
+
+const plats=i=>[...new Set(ACC[i].map(a=>a.pl))];
+const live=i=>build(i).filter(p=>ACC[i].some(a=>a.h===p.a&&a.pl===p.pl));
+let confirmId=null,msg='',uid=100,accF='';
+const TITLES={Video:['Launch video','How-to clip','Event highlights'],Design:['Festive promo graphic','New menu design','Anniversary poster'],Carousel:['5 tips carousel','Product range slides','Customer stories slides'],Text:['Weekly update','Quick poll','Team spotlight']};
+const NOW=new Date(),DAYS=new Date(NOW.getFullYear(),NOW.getMonth()+1,0).getDate(),MONTH=NOW.toLocaleString('en',{month:'long',year:'numeric'}),MON=NOW.toLocaleString('en',{month:'long'}),fixM=s=>s.replace(/September 2026/g,MONTH).replace(/September/g,MON).replace(/\b(\d+) Sep\b/g,'$1 '+MON.slice(0,3));
+function build(i){return POSTS[i]||[]}
+function build0(i){
+ const b=BRANDS[i],r=rng(i*977+13),posts=[];if(!b.p.length)return posts;
+ for(let k=0;k<26;k++){
+  const pl=b.p[Math.floor(r()*b.p.length)],ac=ACC[i].filter(x=>x.pl===pl),a=ac[Math.floor(r()*ac.length)].h;
+  const ty=r()<.2?'Ad':'Post',f=['Video','Design','Carousel','Text'][Math.floor(r()*4)];
+  const t=TITLES[f][Math.floor(r()*TITLES[f].length)];
+  const base=(ty==='Ad'?9000:2400)*(f==='Video'?1.8:f==='Carousel'?1.3:f==='Design'?1:.6)*(.4+r()*1.8);
+  const imp=Math.round(base*(pl==='Website'?1.3:1));
+  const eng=Math.round(imp*(.015+r()*.07));
+  posts.push({d:1+Math.floor(r()*29),pl,a,ty,f,t,imp,eng});
+ }
+ posts.sort((a,c)=>a.d-c.d);
+ return posts;
+}
+let bi=0,tab='accounts',day=1,sel=new Set(),DATA=[];
+const $=id=>document.getElementById(id);
+function filtered(){return live(bi).filter(p=>sel.has(p.pl)&&(!accF||accF===p.pl+p.a))}
+function daily(ps){
+ const a=Array(DAYS).fill(0),w=[.5,.25,.15,.1];
+ ps.forEach(p=>w.forEach((x,k)=>{if(p.d-1+k<DAYS)a[p.d-1+k]+=p.imp*x}));
+ return a.map(Math.round);
+}
+function chart(a){
+ const W=640,H=190,m=26,mx=Math.max(...a,1),bw=(W-m)/DAYS;
+ let s=`<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Impressions per day for ${MONTH}">`;
+ [0,.5,1].forEach(f=>{const y=H-24-(H-44)*f;s+=`<line x1="${m}" x2="${W}" y1="${y}" y2="${y}" stroke="var(--line)"/><text x="0" y="${y+4}">${f?Math.round(mx*f/100)/10+'k':'0'}</text>`});
+ a.forEach((v,k)=>{const h=(H-44)*v/mx,x=m+k*bw+1;s+=`<rect class="rect" x="${x}" y="${H-24-h}" width="${bw-2.5}" height="${h}" rx="2"><title>Day ${k+1}: ${fmt(v)} impressions</title></rect>`});
+ [1,10,20,30].forEach(d=>s+=`<text x="${m+(d-1)*bw}" y="${H-6}">${d}</text>`);
+ return s+'</svg>';
+}
+function totals(ps){const i=ps.reduce((s,p)=>s+p.imp,0),e=ps.reduce((s,p)=>s+p.eng,0);return{i,e,r:i?(e/i*100):0,n:ps.length}}
+function best(ps,key){return ps.slice().sort((a,b)=>b[key]-a[key])[0]}
+function sayings(ps){
+ if(!ps.length)return['Pick at least one platform above to see how this brand is doing.'];
+ const t=totals(ps),b=best(ps,'imp'),bp={};
+ ps.forEach(p=>bp[p.pl]=(bp[p.pl]||0)+p.imp);
+ const top=Object.entries(bp).sort((a,c)=>c[1]-a[1])[0];
+ const ad=ps.filter(p=>p.ty==='Ad'),org=ps.filter(p=>p.ty!=='Ad');
+ const out=[`“${b.t}” on ${b.pl} (day ${b.d}) got the most impressions: ${fmt(b.imp)}.`,
+ `${top[0]} brought in the most views this month, with ${Math.round(top[1]/t.i*100)}% of all impressions.`];
+ if(ad.length&&org.length){const ar=totals(ad).r,or=totals(org).r;out.push(ar>or?`Ads are getting more engagement than regular posts (${ar.toFixed(1)}% against ${or.toFixed(1)}%).`:`Regular posts are getting more engagement than ads (${or.toFixed(1)}% against ${ar.toFixed(1)}%). Ads may need a new look.`)}
+ return out;
+}
+function posts(ps){
+ return `<div class="scroll"><table><thead><tr><th>Day</th><th>Platform</th><th>Type</th><th>Title</th><th class="n">Impressions</th><th class="n">Engagements</th><th class="n">Rate</th></tr></thead><tbody>`+
+ ps.slice().sort((a,b)=>b.imp-a.imp).map(p=>`<tr><td>${p.d} Sep</td><td>${p.pl}</td><td>${tg(p)}</td><td>${p.t}</td><td class="n">${fmt(p.imp)}</td><td class="n">${fmt(p.eng)}</td><td class="n">${(p.eng/p.imp*100).toFixed(1)}%</td></tr>`).join('')+`</tbody></table></div>`;
+}
+function brandCard(brand){
+ return `<div class="card"><h2>Brands</h2><p class="note">Type a name, then press Add brand for a new brand, or Rename to change the name of ${brand}.</p><input id="newb" placeholder="New brand name" aria-label="New brand name" style="font:inherit;padding:8px 10px;border:1px solid var(--line);border-radius:6px;background:var(--bg);color:var(--text);margin:0 8px 10px 0;display:block;width:100%;max-width:300px"><div class="chips" style="margin:0"><button class="chip" data-act="addbrand">Add brand</button><button class="chip" data-act="rename">Rename this brand</button>${confirmId==='brand'?`<button class="chip" data-act="yesbrand">Yes, remove ${brand}</button> <button class="chip" data-act="nobrand">Cancel</button>`:`<button class="chip" data-act="delbrand">Remove ${brand}</button>`}</div></div>`;
+}
+function accountsView(brand){return accountsView0(brand)+brandCard(brand)}
+function accountsView0(brand){
+ const A=ACC[bi],PL=['X','Facebook','Instagram','LinkedIn','YouTube','TikTok'];
+ let h=`<div class="card"><h2>Connected accounts for ${brand}</h2><p class="note">A brand can have more than one account on the same platform. Add or remove accounts at any time.</p>${msg?`<p class="say" role="status">${msg}</p>`:''}<div class="scroll"><table><thead><tr><th>Platform</th><th>Account</th><th>Status</th><th></th></tr></thead><tbody>`+
+ (A.length?A.map(a=>`<tr><td>${a.pl}</td><td>${a.h}</td><td><span class="tag${a.st==='Needs reconnecting'?' ad':''}">${a.st}</span></td><td class="n">${a.st==='Needs reconnecting'?`<button class="chip" data-act="rec" data-id="${a.id}">Reconnect</button> `:''}${confirmId===a.id?`<button class="chip" data-act="yes" data-id="${a.id}">Yes, remove</button> <button class="chip" data-act="no">Cancel</button>`:`<button class="chip" data-act="del" data-id="${a.id}">Remove</button>`}</td></tr>`).join(''):'<tr><td colspan="4">No accounts connected yet.</td></tr>')+`</tbody></table></div></div>`;
+ h+=`<div class="card"><h2>Add an account</h2><p class="note">Connect opens the platform's own login window, and someone who manages the account presses Allow. YouTube works now. The other platforms are coming next.</p><div class="chips" style="margin:0">`+PL.map(p=>`<button class="chip" data-act="add" data-pl="${p}">Connect ${p}</button>`).join('')+`<button class="chip" data-act="refresh">Refresh numbers now</button>`+`</div></div>`;
+ return h;
+}
+function tg(p){return `<span class="tag">${p.f}</span>${p.ty==='Ad'?' <span class="tag ad">Ad</span>':''}`}
+function formatsView(ps,brand){
+ const F=['Video','Design','Carousel','Text'],pls=plats(bi).filter(p=>sel.has(p));
+ if(!ps.length)return '<div class="card"><p>Pick at least one platform above.</p></div>';
+ const cell=(f,p)=>{const v=ps.filter(x=>x.f===f&&(!p||x.pl===p));return v.length?`${fmt(totals(v).i)}<small> (${v.length})</small>`:'–'};
+ let h=`<div class="card"><h2>How each format did</h2><p class="note">Total impressions this month, with the number of posts in brackets.</p><div class="scroll"><table><thead><tr><th>Format</th>`+pls.map(p=>`<th class="n">${p}</th>`).join('')+`<th class="n">All platforms</th></tr></thead><tbody>`+F.map(f=>`<tr><td><span class="tag">${f}</span></td>`+pls.map(p=>`<td class="n">${cell(f,p)}</td>`).join('')+`<td class="n"><b>${cell(f)}</b></td></tr>`).join('')+`</tbody></table></div></div>`;
+ const avg=F.map(f=>{const v=ps.filter(x=>x.f===f);return{f,a:v.length?totals(v).i/v.length:0}}).filter(x=>x.a).sort((a,b)=>b.a-a.a);
+ if(avg.length>1)h+=`<div class="card"><h2>What this means</h2><p class="say">${avg[0].f} posts did best for ${brand}, averaging ${fmt(Math.round(avg[0].a))} impressions each.</p><p class="say">${avg[avg.length-1].f} posts did the least, averaging ${fmt(Math.round(avg[avg.length-1].a))}.</p></div>`;
+ return h;
+}
+function dtable(v){return `<div class="scroll"><table><thead><tr><th>Type</th><th>Title</th><th class="n">Impressions</th><th class="n">Engagements</th><th class="n">Rate</th></tr></thead><tbody>`+v.slice().sort((a,b)=>b.imp-a.imp).map(p=>`<tr><td>${tg(p)}</td><td>${p.t}</td><td class="n">${fmt(p.imp)}</td><td class="n">${fmt(p.eng)}</td><td class="n">${(p.eng/p.imp*100).toFixed(1)}%</td></tr>`).join('')+`</tbody></table></div>`}
+function dailyView(ps,brand){
+ const dp=ps.filter(p=>p.d===day),t=totals(dp),by={};
+ dp.forEach(p=>(by[p.pl]=by[p.pl]||[]).push(p));
+ const opts=Array.from({length:DAYS},(_,k)=>`<option value="${k+1}"${k+1===day?' selected':''}>${k+1} September 2026</option>`).join('');
+ let h=`<div class="card"><h2>Daily review</h2><p class="note">Pick a day to see every post made that day, and how well each one did.</p><select id="day" aria-label="Choose a day">${opts}</select></div>`;
+ h+=`<div class="kpis"><div class="card kpi"><b>${t.n}</b><small>Posts and ads made</small></div><div class="card kpi"><b>${fmt(t.i)}</b><small>Impressions</small></div><div class="card kpi"><b>${fmt(t.e)}</b><small>Engagements</small></div><div class="card kpi"><b>${t.r.toFixed(1)}%</b><small>Engagement rate</small></div></div>`;
+ if(dp.length){const b=best(dp,'imp');h+=`<div class="card"><p class="say">${brand} made ${t.n} post${t.n>1?'s':''} on ${day} September. The best was “${b.t}” on ${b.pl}, with ${fmt(b.imp)} impressions.</p></div>`;
+  h+=Object.entries(by).map(([k,v])=>`<div class="card"><h2>${brand} on ${k}</h2>${dtable(v)}</div>`).join('')}
+ else h+=`<div class="card"><p>${brand} made no posts on ${day} September for the selected platforms.</p></div>`;
+ h+=`<div class="card"><h2>All brands on ${day} September</h2><div class="scroll"><table><thead><tr><th>Brand</th><th class="n">Posts</th><th class="n">Impressions</th><th class="n">Engagements</th></tr></thead><tbody>`+BRANDS.map((x,i)=>{if(x.gone)return '';const q=totals(live(i).filter(p=>p.d===day));return`<tr><td>${x.n}</td><td class="n">${q.n}</td><td class="n">${fmt(q.i)}</td><td class="n">${fmt(q.e)}</td></tr>`}).join('')+`</tbody></table></div></div>`;
+ return h;
+}
+function render(){
+ const ps=filtered(),t=totals(ps),brand=BRANDS[bi].n;$('chips').style.display=tab==='accounts'?'none':'flex';
+ let h='';
+ if(tab==='accounts'){h=accountsView(brand)}else if(tab==='daily'){h=dailyView(ps,brand)}else if(tab==='formats'){h=formatsView(ps,brand)}else if(tab==='overview'){
+  h=`<div class="kpis"><div class="card kpi"><b>${fmt(t.i)}</b><small>Impressions this month</small></div><div class="card kpi"><b>${fmt(t.e)}</b><small>Engagements</small></div><div class="card kpi"><b>${t.r.toFixed(1)}%</b><small>Engagement rate</small></div><div class="card kpi"><b>${t.n}</b><small>Posts and ads</small></div></div>
+  <div class="card"><h2>Impressions per day</h2><p class="note">${brand}, ${MONTH}</p>${chart(daily(ps))}</div>
+  <div class="card"><h2>What happened</h2>${sayings(ps).map(s=>`<p class="say">${s}</p>`).join('')}</div>`;
+ }else if(tab==='posts'){
+  h=`<div class="card"><h2>How each post and ad did</h2><p class="note">Sorted from most to fewest impressions.</p>${ps.length?posts(ps):'<p>No posts for the selected platforms.</p>'}</div>`;
+ }else if(tab==='timeline'){
+  h=`<div class="card"><h2>${brand} timeline</h2><p class="note">Posts, videos and ads in the order they went out. Hollow dots are paid ads.</p><ul class="tl">`+
+  ps.map(p=>`<li class="${p.ty==='Ad'?'ad':''}"><b>${p.t}</b> ${tg(p)}<small>${p.d} Sep on ${p.pl}: ${fmt(p.imp)} impressions, ${fmt(p.eng)} engagements</small></li>`).join('')+`</ul></div>`;
+ }else{
+  const by={};ps.forEach(p=>{(by[p.pl]=by[p.pl]||[]).push(p)});
+  h=`<div class="card"><h2>${brand}: ${MONTH}</h2><p class="note">Monthly report, written for the leadership team.</p>
+  <p class="say">${brand} reached ${fmt(t.i)} impressions and ${fmt(t.e)} engagements across ${t.n} posts and ads, an engagement rate of ${t.r.toFixed(1)}%.</p>${sayings(ps).map(s=>`<p class="say">${s}</p>`).join('')}</div>
+  <div class="card"><h2>By platform</h2><div class="scroll"><table><thead><tr><th>Platform</th><th class="n">Posts</th><th class="n">Impressions</th><th class="n">Engagements</th><th class="n">Rate</th></tr></thead><tbody>`+
+  Object.entries(by).map(([k,v])=>{const x=totals(v);return`<tr><td>${k}</td><td class="n">${x.n}</td><td class="n">${fmt(x.i)}</td><td class="n">${fmt(x.e)}</td><td class="n">${x.r.toFixed(1)}%</td></tr>`}).join('')+`</tbody></table></div></div>`;
+ }
+ $('view').innerHTML=fixM(tab!=='accounts'&&!ACC[bi].length?'<div class="card"><h2>No accounts linked yet</h2><p class="note">Open “Brands &amp; accounts” (top right) and press Connect on a platform to link this brand’s accounts. Numbers appear after the first daily update.</p></div>':h);
+}
+function chips(){
+ $('chips').innerHTML=plats(bi).map(p=>`<button class="chip" data-p="${p}" aria-pressed="${sel.has(p)}">${p}</button>`).join('')+(ACC[bi].length>1?`<select id="accf" aria-label="Filter by account" style="min-width:0;padding:5px 10px;font-size:13px"><option value="">All accounts</option>`+ACC[bi].map(a=>`<option value="${a.pl}${a.h}"${accF===a.pl+a.h?' selected':''}>${a.h} (${a.pl})</option>`).join('')+`</select>`:'');
+}
+function load(i){bi=i;DATA=build(i);sel=new Set(plats(i));accF='';confirmId=null;msg='';day=Math.max(1,...DATA.map(p=>p.d));chips();render()}
+$('brand').onchange=e=>load(+e.target.value);
+function fillBrands(){$('brand').innerHTML=BRANDS.map((b,i)=>b.gone?'':`<option value="${i}"${i===bi?' selected':''}>${b.n}</option>`).join('')}
+fillBrands();
+$('chips').onclick=e=>{const p=e.target.dataset.p;if(!p)return;sel.has(p)?sel.delete(p):sel.add(p);chips();render()};
+$('manage').onclick=()=>{tab='accounts';[...$('tabs').children].forEach(b=>b.setAttribute('aria-selected',b.dataset.t==='accounts'));render();scrollTo(0,0)};
+$('chips').onchange=e=>{if(e.target.id==='accf'){accF=e.target.value;render()}};
+$('tabs').onclick=e=>{const t=e.target.dataset.t;if(!t)return;tab=t;[...$('tabs').children].forEach(b=>b.setAttribute('aria-selected',b.dataset.t===t));render()};
+$('view').onclick=e=>{const b=e.target.closest('button[data-act]');if(!b)return;const A=ACC[bi],act=b.dataset.act,id=b.dataset.id;
+ if(act==='addbrand'){const inp=$('newb'),n=inp&&inp.value.trim();if(!n)msg='Type a brand name first.';else if(BRANDS.some(x=>!x.gone&&x.n.toLowerCase()===n.toLowerCase()))msg=`${n} already exists.`;else{BRANDS.push({n,p:[]});ACC.push([]);bi=BRANDS.length-1;fillBrands();load(bi);msg=`${n} added. Now connect its accounts below.`;render();return}}
+ else if(act==='rename'){const n=$('newb')&&$('newb').value.trim();if(!n)msg='Type the new name first.';else{BRANDS[bi].n=n;fillBrands();msg=`Brand renamed to ${n}.`}}
+ else if(act==='clearsample'){BRANDS.forEach(x=>{if(x.p.length)x.gone=true});const n=($('newb')&&$('newb').value.trim())||'My brand';if(BRANDS.every(x=>x.gone)){BRANDS.push({n,p:[]});ACC.push([])}bi=BRANDS.findIndex(x=>!x.gone);fillBrands();load(bi);msg='Sample brands removed. Add your brands here, then connect their accounts below.';render();return}
+ else if(act==='delbrand'){if(BRANDS.filter(x=>!x.gone).length<2)msg='Keep at least one brand.';else{confirmId='brand';msg=''}}
+ else if(act==='yesbrand'){BRANDS[bi].gone=true;confirmId=null;bi=BRANDS.findIndex(x=>!x.gone);fillBrands();load(bi);msg='Brand removed.';render();return}
+ else if(act==='nobrand')confirmId=null;
+ else if(act==='add'){const pl=b.dataset.pl,inp=$('newh');let h=(inp&&inp.value.trim())||slug(BRANDS[bi].n)+'_'+(A.length+1);if(h[0]!=='@')h='@'+h;
+  if(A.some(a=>a.pl===pl&&a.h===h))msg=`${h} is already connected on ${pl}.`;else{A.push({id:'a'+(uid++),pl,h,st:'Connected, waiting for first data'});msg=`${pl} account ${h} connected. Its numbers will appear after tomorrow's daily update.`}}
+ else if(act==='del'){confirmId=id;msg=''}
+ else if(act==='no')confirmId=null;
+ else if(act==='yes'){const a=A.find(x=>x.id===id);ACC[bi]=A.filter(x=>x.id!==id);confirmId=null;msg=`${a.h} on ${a.pl} was removed. Its posts no longer appear in reports.`}
+ else if(act==='rec'){A.find(x=>x.id===id).st='Connected';msg='Account reconnected.'}
+ accF='';sel=new Set(plats(bi));chips();render()};
+$('view').onchange=e=>{if(e.target.id==='day'){day=+e.target.value;render()}};
+function setTheme(t){document.documentElement.dataset.theme=t;$('theme').textContent=t==='dark'?'Switch to light view':'Switch to dark view';try{localStorage.setItem('rv-theme',t)}catch(e){}}
+let st=null;try{st=localStorage.getItem('rv-theme')}catch(e){}
+setTheme(st||(matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light'));
+$('theme').onclick=()=>setTheme(document.documentElement.dataset.theme==='dark'?'light':'dark');
+const POSTS=[],q=new URLSearchParams(location.search);
+async function api(u,m,b){const o=()=>({method:m||'GET',credentials:'same-origin',headers:{'Content-Type':'application/json'},body:b?JSON.stringify(b):undefined});
+ let r=await fetch(u,o());
+ while(r.status===401){const pw=prompt('Enter the RAGEview password');if(!pw)throw new Error('Login needed');
+  const l=await fetch('/api/login',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({password:pw})});
+  if(l.ok)r=await fetch(u,o());else alert('Wrong password')}
+ return r.json()}
+async function sync(keep){const s=await api('/api/state');BRANDS.length=0;ACC.length=0;POSTS.length=0;
+ s.brands.forEach(b=>{BRANDS.push({n:b.name,id:b.id,p:[]});ACC.push(s.accounts.filter(a=>a.brand_id===b.id).map(a=>({id:a.id,pl:a.platform,h:a.handle,st:a.status})));POSTS.push(s.posts.filter(p=>p.brand_id===b.id))});
+ bi=Math.min(keep==null?bi:keep,BRANDS.length-1);fillBrands();load(bi)}
+$('view').onclick=async e=>{const b=e.target.closest('button[data-act]');if(!b)return;const act=b.dataset.act,id=b.dataset.id,br=BRANDS[bi];
+ try{
+  if(act==='add'||act==='rec'){const pl=act==='rec'?ACC[bi].find(x=>x.id==id).pl:b.dataset.pl;if(pl!=='YouTube'){msg=pl+' linking is not built yet. YouTube is available now.';return render()}location.href='/api/connect?brand='+br.id;return}
+  if(act==='refresh'){msg='Refreshing numbers...';render();await api('/api/collect?now=1');await sync();msg='Numbers refreshed.';return render()}
+  if(act==='addbrand'){const n=$('newb').value.trim();if(!n){msg='Type a brand name first.';return render()}await api('/api/brands','POST',{name:n});await sync(BRANDS.length);msg=n+' added. Now connect its accounts below.';return render()}
+  if(act==='rename'){const n=$('newb').value.trim();if(!n){msg='Type the new name first.';return render()}await api('/api/brands','PATCH',{id:br.id,name:n});await sync();msg='Brand renamed.';return render()}
+  if(act==='delbrand'){if(BRANDS.length<2)msg='Keep at least one brand.';else{confirmId='brand';msg=''}return render()}
+  if(act==='yesbrand'){await api('/api/brands?id='+br.id,'DELETE');await sync(0);msg='Brand removed.';return render()}
+  if(act==='del'){confirmId=id;msg='';return render()}
+  if(act==='yes'){await api('/api/accounts?id='+id,'DELETE');await sync();msg='Account removed. Its posts no longer appear in reports.';return render()}
+  if(act==='no'||act==='nobrand'){confirmId=null;return render()}
+ }catch(err){msg='Something went wrong: '+err.message;render()}};
+sync(0).then(()=>{if(q.get('connected'))msg='YouTube channel connected. Press \u201cRefresh numbers now\u201d to pull its first numbers.';if(q.get('error'))msg='Linking failed: '+q.get('error');render()}).catch(()=>{});
+</script>
+</body>
+</html>
