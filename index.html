@@ -92,8 +92,8 @@ const plats=i=>[...new Set(ACC[i].map(a=>a.pl))];
 const live=i=>build(i).filter(p=>ACC[i].some(a=>a.h===p.a&&a.pl===p.pl));
 let confirmId=null,msg='',uid=100,accF='';
 const TITLES={Video:['Launch video','How-to clip','Event highlights'],Design:['Festive promo graphic','New menu design','Anniversary poster'],Carousel:['5 tips carousel','Product range slides','Customer stories slides'],Text:['Weekly update','Quick poll','Team spotlight']};
-const DAYS=30,MONTH='September 2026';
-function build(i){return CACHE[i]||(CACHE[i]=build0(i))}
+const NOW=new Date(),DAYS=new Date(NOW.getFullYear(),NOW.getMonth()+1,0).getDate(),MONTH=NOW.toLocaleString('en',{month:'long',year:'numeric'}),MON=NOW.toLocaleString('en',{month:'long'}),fixM=s=>s.replace(/September 2026/g,MONTH).replace(/September/g,MON).replace(/\b(\d+) Sep\b/g,'$1 '+MON.slice(0,3));
+function build(i){return POSTS[i]||[]}
 function build0(i){
  const b=BRANDS[i],r=rng(i*977+13),posts=[];if(!b.p.length)return posts;
  for(let k=0;k<26;k++){
@@ -149,7 +149,7 @@ function accountsView0(brand){
  const A=ACC[bi],PL=['X','Facebook','Instagram','LinkedIn','YouTube','TikTok'];
  let h=`<div class="card"><h2>Connected accounts for ${brand}</h2><p class="note">A brand can have more than one account on the same platform. Add or remove accounts at any time.</p>${msg?`<p class="say" role="status">${msg}</p>`:''}<div class="scroll"><table><thead><tr><th>Platform</th><th>Account</th><th>Status</th><th></th></tr></thead><tbody>`+
  (A.length?A.map(a=>`<tr><td>${a.pl}</td><td>${a.h}</td><td><span class="tag${a.st==='Needs reconnecting'?' ad':''}">${a.st}</span></td><td class="n">${a.st==='Needs reconnecting'?`<button class="chip" data-act="rec" data-id="${a.id}">Reconnect</button> `:''}${confirmId===a.id?`<button class="chip" data-act="yes" data-id="${a.id}">Yes, remove</button> <button class="chip" data-act="no">Cancel</button>`:`<button class="chip" data-act="del" data-id="${a.id}">Remove</button>`}</td></tr>`).join(''):'<tr><td colspan="4">No accounts connected yet.</td></tr>')+`</tbody></table></div></div>`;
- h+=`<div class="card"><h2>Add an account</h2><p class="note">In the real tool, Connect opens the platform's own login window, and someone who manages the account presses Allow. Here, type a sample handle (or leave it blank) and press Connect.</p><input id="newh" placeholder="@handle (sample only)" aria-label="Account handle" style="font:inherit;padding:8px 10px;border:1px solid var(--line);border-radius:6px;background:var(--bg);color:var(--text);margin-bottom:10px;display:block;width:100%;max-width:300px"><div class="chips" style="margin:0">`+PL.map(p=>`<button class="chip" data-act="add" data-pl="${p}">Connect ${p}</button>`).join('')+`</div></div>`;
+ h+=`<div class="card"><h2>Add an account</h2><p class="note">Connect opens the platform's own login window, and someone who manages the account presses Allow. Choose a platform to link. Each one opens that platform's own login window.</p><div class="chips" style="margin:0">`+PL.map(p=>`<button class="chip" data-act="add" data-pl="${p}">Connect ${p}</button>`).join('')+`<button class="chip" data-act="refresh">Refresh numbers now</button>`+`</div></div>`;
  return h;
 }
 function tg(p){return `<span class="tag">${p.f}</span>${p.ty==='Ad'?' <span class="tag ad">Ad</span>':''}`}
@@ -194,7 +194,7 @@ function render(){
   <div class="card"><h2>By platform</h2><div class="scroll"><table><thead><tr><th>Platform</th><th class="n">Posts</th><th class="n">Impressions</th><th class="n">Engagements</th><th class="n">Rate</th></tr></thead><tbody>`+
   Object.entries(by).map(([k,v])=>{const x=totals(v);return`<tr><td>${k}</td><td class="n">${x.n}</td><td class="n">${fmt(x.i)}</td><td class="n">${fmt(x.e)}</td><td class="n">${x.r.toFixed(1)}%</td></tr>`}).join('')+`</tbody></table></div></div>`;
  }
- $('view').innerHTML=(tab!=='accounts'&&!ACC[bi].length?'<div class="card"><h2>No accounts linked yet</h2><p class="note">Open “Brands &amp; accounts” (top right) and press Connect on a platform to link this brand’s accounts. Numbers appear after the first daily update.</p></div>':h);
+ $('view').innerHTML=fixM(tab!=='accounts'&&!ACC[bi].length?'<div class="card"><h2>No accounts linked yet</h2><p class="note">Open “Brands &amp; accounts” (top right) and press Connect on a platform to link this brand’s accounts. Numbers appear after the first daily update.</p></div>':h);
 }
 function chips(){
  $('chips').innerHTML=plats(bi).map(p=>`<button class="chip" data-p="${p}" aria-pressed="${sel.has(p)}">${p}</button>`).join('')+(ACC[bi].length>1?`<select id="accf" aria-label="Filter by account" style="min-width:0;padding:5px 10px;font-size:13px"><option value="">All accounts</option>`+ACC[bi].map(a=>`<option value="${a.pl}${a.h}"${accF===a.pl+a.h?' selected':''}>${a.h} (${a.pl})</option>`).join('')+`</select>`:'');
@@ -226,7 +226,29 @@ function setTheme(t){document.documentElement.dataset.theme=t;$('theme').textCon
 let st=null;try{st=localStorage.getItem('rv-theme')}catch(e){}
 setTheme(st||(matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light'));
 $('theme').onclick=()=>setTheme(document.documentElement.dataset.theme==='dark'?'light':'dark');
-load(0);
+const POSTS=[],q=new URLSearchParams(location.search);
+async function api(u,m,b){const o=()=>({method:m||'GET',credentials:'same-origin',headers:{'Content-Type':'application/json'},body:b?JSON.stringify(b):undefined});
+ let r=await fetch(u,o());
+ while(r.status===401){const pw=prompt('Enter the RAGEview password');if(!pw)throw new Error('Login needed');
+  const l=await fetch('/api/login',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({password:pw})});
+  if(l.ok)r=await fetch(u,o());else alert('Wrong password')}
+ return r.json()}
+async function sync(keep){const s=await api('/api/state');BRANDS.length=0;ACC.length=0;POSTS.length=0;
+ s.brands.forEach(b=>{BRANDS.push({n:b.name,id:b.id,p:[]});ACC.push(s.accounts.filter(a=>a.brand_id===b.id).map(a=>({id:a.id,pl:a.platform,h:a.handle,st:a.status})));POSTS.push(s.posts.filter(p=>p.brand_id===b.id))});
+ bi=Math.min(keep==null?bi:keep,BRANDS.length-1);fillBrands();load(bi)}
+$('view').onclick=async e=>{const b=e.target.closest('button[data-act]');if(!b)return;const act=b.dataset.act,id=b.dataset.id,br=BRANDS[bi];
+ try{
+  if(act==='add'||act==='rec'){const pl=act==='rec'?ACC[bi].find(x=>x.id==id).pl:b.dataset.pl;location.href='/api/connect?platform='+encodeURIComponent(pl)+'&brand='+br.id;return}
+  if(act==='refresh'){msg='Refreshing numbers...';render();const r=await api('/api/collect?now=1');await sync();msg=r.errors&&r.errors.length?'Some accounts could not be read: '+r.errors.map(x=>x.platform+' ('+x.msg+')').join('; '):'Numbers refreshed.';return render()}
+  if(act==='addbrand'){const n=$('newb').value.trim();if(!n){msg='Type a brand name first.';return render()}await api('/api/brands','POST',{name:n});await sync(BRANDS.length);msg=n+' added. Now connect its accounts below.';return render()}
+  if(act==='rename'){const n=$('newb').value.trim();if(!n){msg='Type the new name first.';return render()}await api('/api/brands','PATCH',{id:br.id,name:n});await sync();msg='Brand renamed.';return render()}
+  if(act==='delbrand'){if(BRANDS.length<2)msg='Keep at least one brand.';else{confirmId='brand';msg=''}return render()}
+  if(act==='yesbrand'){await api('/api/brands?id='+br.id,'DELETE');await sync(0);msg='Brand removed.';return render()}
+  if(act==='del'){confirmId=id;msg='';return render()}
+  if(act==='yes'){await api('/api/accounts?id='+id,'DELETE');await sync();msg='Account removed. Its posts no longer appear in reports.';return render()}
+  if(act==='no'||act==='nobrand'){confirmId=null;return render()}
+ }catch(err){msg='Something went wrong: '+err.message;render()}};
+sync(0).then(()=>{if(q.get('connected'))msg=q.get('connected')+' account linked. Press \u201cRefresh numbers now\u201d to pull its numbers.';if(q.get('error'))msg='Linking failed: '+q.get('error');render()}).catch(()=>{});
 </script>
 </body>
 </html>
