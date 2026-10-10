@@ -52,6 +52,15 @@ svg text{fill:var(--muted);font-family:inherit;font-size:11px}
 </style>
 </head>
 <body>
+<div id="login" style="display:none;position:fixed;inset:0;z-index:10;background:var(--bg);align-items:center;justify-content:center;padding:20px">
+  <div class="card" style="width:100%;max-width:360px;margin:0">
+    <div class="logo">RAGE<span>view</span></div>
+    <p class="note" style="margin-top:6px">Sign in to continue.</p>
+    <input id="pw" type="password" placeholder="Password" aria-label="Password" style="font:inherit;padding:10px 12px;border:1px solid var(--line);border-radius:6px;background:var(--bg);color:var(--text);width:100%;margin-bottom:10px">
+    <button id="go" class="chip" type="button" style="padding:8px 18px">Sign in</button>
+    <p id="lerr" class="note" role="alert" style="margin-top:10px"></p>
+  </div>
+</div>
 <header>
   <div class="logo">RAGE<span>view</span></div>
   <label>
@@ -226,19 +235,24 @@ function setTheme(t){document.documentElement.dataset.theme=t;$('theme').textCon
 let st=null;try{st=localStorage.getItem('rv-theme')}catch(e){}
 setTheme(st||(matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light'));
 $('theme').onclick=()=>setTheme(document.documentElement.dataset.theme==='dark'?'light':'dark');
-const POSTS=[],q=new URLSearchParams(location.search);
+let offline=false;const POSTS=[],q=new URLSearchParams(location.search);
+function askLogin(){return new Promise(res=>{$('login').style.display='flex';$('pw').focus();
+ const go=async()=>{try{const l=await fetch('/api/login',{method:'POST',credentials:'same-origin',headers:{'Content-Type':'application/json'},body:JSON.stringify({password:$('pw').value})});
+  if(l.ok){$('login').style.display='none';$('pw').value='';$('lerr').textContent='';res()}
+  else $('lerr').textContent=l.status===401?'Wrong password.':'Sign-in is not set up yet (error '+l.status+'). Check the settings in Vercel.'}
+  catch(e){$('lerr').textContent='Could not reach the server.'}};
+ $('go').onclick=go;$('pw').onkeydown=e=>{if(e.key==='Enter')go()}})}
 async function api(u,m,b){const o=()=>({method:m||'GET',credentials:'same-origin',headers:{'Content-Type':'application/json'},body:b?JSON.stringify(b):undefined});
- let r=await fetch(u,o());
- while(r.status===401){const pw=prompt('Enter the RAGEview password');if(!pw)throw new Error('Login needed');
-  const l=await fetch('/api/login',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({password:pw})});
-  if(l.ok)r=await fetch(u,o());else alert('Wrong password')}
- return r.json()}
-async function sync(keep){const s=await api('/api/state');BRANDS.length=0;ACC.length=0;POSTS.length=0;
+ let r=await fetch(u,o());if(r.status===401){await askLogin();r=await fetch(u,o())}
+ const t=await r.text();let d=null;try{d=JSON.parse(t)}catch(e){}
+ if(!r.ok||d===null)throw new Error(r.status>=500?'The back end is not set up yet (server error '+r.status+'). Finish the setup steps in Vercel.':'Request failed ('+r.status+')');
+ return d}
+async function sync(keep){const s=await api('/api/state');offline=false;BRANDS.length=0;ACC.length=0;POSTS.length=0;
  s.brands.forEach(b=>{BRANDS.push({n:b.name,id:b.id,p:[]});ACC.push(s.accounts.filter(a=>a.brand_id===b.id).map(a=>({id:a.id,pl:a.platform,h:a.handle,st:a.status})));POSTS.push(s.posts.filter(p=>p.brand_id===b.id))});
  bi=Math.min(keep==null?bi:keep,BRANDS.length-1);fillBrands();load(bi)}
 $('view').onclick=async e=>{const b=e.target.closest('button[data-act]');if(!b)return;const act=b.dataset.act,id=b.dataset.id,br=BRANDS[bi];
  try{
-  if(act==='add'||act==='rec'){const pl=act==='rec'?ACC[bi].find(x=>x.id==id).pl:b.dataset.pl;location.href='/api/connect?platform='+encodeURIComponent(pl)+'&brand='+br.id;return}
+  if(act==='add'||act==='rec'){if(offline){msg='The back end is not ready yet, so accounts cannot be linked. Finish the setup steps in Vercel first.';return render()}const pl=act==='rec'?ACC[bi].find(x=>x.id==id).pl:b.dataset.pl;location.href='/api/connect?platform='+encodeURIComponent(pl)+'&brand='+br.id;return}
   if(act==='refresh'){msg='Refreshing numbers...';render();const r=await api('/api/collect?now=1');await sync();msg=r.errors&&r.errors.length?'Some accounts could not be read: '+r.errors.map(x=>x.platform+' ('+x.msg+')').join('; '):'Numbers refreshed.';return render()}
   if(act==='addbrand'){const n=$('newb').value.trim();if(!n){msg='Type a brand name first.';return render()}await api('/api/brands','POST',{name:n});await sync(BRANDS.length);msg=n+' added. Now connect its accounts below.';return render()}
   if(act==='rename'){const n=$('newb').value.trim();if(!n){msg='Type the new name first.';return render()}await api('/api/brands','PATCH',{id:br.id,name:n});await sync();msg='Brand renamed.';return render()}
@@ -248,7 +262,7 @@ $('view').onclick=async e=>{const b=e.target.closest('button[data-act]');if(!b)r
   if(act==='yes'){await api('/api/accounts?id='+id,'DELETE');await sync();msg='Account removed. Its posts no longer appear in reports.';return render()}
   if(act==='no'||act==='nobrand'){confirmId=null;return render()}
  }catch(err){msg='Something went wrong: '+err.message;render()}};
-sync(0).then(()=>{if(q.get('connected'))msg=q.get('connected')+' account linked. Press \u201cRefresh numbers now\u201d to pull its numbers.';if(q.get('error'))msg='Linking failed: '+q.get('error');render()}).catch(()=>{});
+sync(0).then(()=>{if(q.get('connected'))msg=q.get('connected')+' account linked. Press \u201cRefresh numbers now\u201d to pull its numbers.';if(q.get('error'))msg='Linking failed: '+q.get('error');render()}).catch(e=>{offline=true;msg=e.message;render()});
 </script>
 </body>
 </html>
