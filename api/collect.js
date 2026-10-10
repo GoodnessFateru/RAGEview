@@ -1,9 +1,9 @@
-import {sql,authed} from './_lib.js';
+import {sql,user} from './_lib.js';
 import {P} from './_platforms.js';
 export default async function h(req,res){
  const cron=process.env.CRON_SECRET&&req.headers.authorization==='Bearer '+process.env.CRON_SECRET;
- if(!authed(req)&&!cron)return res.status(401).end();
- const accs=await sql`select * from accounts where refresh_token is not null`,errors=[];
+ const u=cron?null:await user(req);if(!u&&!cron)return res.status(401).end();
+ const accs=u?await sql`select a.* from accounts a join brands b on b.id=a.brand_id where a.refresh_token is not null and (${u.is_admin}::boolean or b.user_id=${u.id})`:await sql`select * from accounts where refresh_token is not null`,errors=[];
  for(const a of accs){try{
   const r=await P[a.platform].collect(a);
   for(const v of r.posts){

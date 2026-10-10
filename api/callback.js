@@ -1,9 +1,10 @@
 import {sql,guard} from './_lib.js';
 import {P} from './_platforms.js';
-export default async function h(req,res){if(!guard(req,res))return;
+export default async function h(req,res){const u=await guard(req,res);if(!u)return;
  const {code,state,error}=req.query;if(error)return res.redirect('/?error='+encodeURIComponent(error));
  try{
   const [pl,brand]=String(state).split('.'),p=P[pl];if(!p)throw new Error('Unknown platform');
+  if(!(await sql`select 1 from brands where id=${brand} and (${u.is_admin}::boolean or user_id=${u.id})`).length)throw new Error('That brand is not yours');
   const verifier=((req.headers.cookie||'').match(/pk=([\w-]+)/)||[])[1];
   const accs=await p.exchange(code,{platform:pl,verifier});
   if(!accs.length)throw new Error('No '+pl+' accounts were found for that login');

@@ -1,4 +1,5 @@
-import {setSession} from './_lib.js';
-export default function h(req,res){const p=req.body&&req.body.password;
- if(p&&p===process.env.APP_PASSWORD){setSession(res);return res.json({ok:true})}
- res.status(401).json({error:'bad password'})}
+import {sql,setSession,check} from './_lib.js';
+export default async function h(req,res){const {email,password}=req.body||{};
+ const r=await sql`select id,pass_hash from users where email=${String(email||'').trim().toLowerCase()}`;
+ if(!r.length||!check(String(password||''),r[0].pass_hash))return res.status(401).json({error:'Wrong email or password.'});
+ setSession(res,r[0].id);res.json({ok:true})}

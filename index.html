@@ -53,12 +53,15 @@ svg text{fill:var(--muted);font-family:inherit;font-size:11px}
 </head>
 <body>
 <div id="login" style="display:none;position:fixed;inset:0;z-index:10;background:var(--bg);align-items:center;justify-content:center;padding:20px">
-  <div class="card" style="width:100%;max-width:360px;margin:0">
+  <div class="card" style="width:100%;max-width:380px;margin:0">
     <div class="logo">RAGE<span>view</span></div>
-    <p class="note" style="margin-top:6px">Sign in to continue.</p>
-    <input id="pw" type="password" placeholder="Password" aria-label="Password" style="font:inherit;padding:10px 12px;border:1px solid var(--line);border-radius:6px;background:var(--bg);color:var(--text);width:100%;margin-bottom:10px">
+    <h2 id="ltitle" style="margin-top:14px">Sign in</h2>
+    <p class="note">See how every brand's social media is doing, in one place.</p>
+    <input id="em" type="email" placeholder="Email" aria-label="Email" autocomplete="email" style="font:inherit;padding:10px 12px;border:1px solid var(--line);border-radius:6px;background:var(--bg);color:var(--text);width:100%;margin-bottom:10px">
+    <input id="pw" type="password" placeholder="Password (8 characters or more)" aria-label="Password" style="font:inherit;padding:10px 12px;border:1px solid var(--line);border-radius:6px;background:var(--bg);color:var(--text);width:100%;margin-bottom:10px">
     <button id="go" class="chip" type="button" style="padding:8px 18px">Sign in</button>
-    <p id="lerr" class="note" role="alert" style="margin-top:10px"></p>
+    <p id="lerr" class="note" role="alert" style="margin:10px 0"></p>
+    <button id="lt" class="chip" type="button">Create an account</button>
   </div>
 </div>
 <header>
@@ -67,6 +70,7 @@ svg text{fill:var(--muted);font-family:inherit;font-size:11px}
     <select id="brand" aria-label="Choose a brand"></select>
   </label>
   <button id="manage" class="chip" type="button">Brands &amp; accounts</button>
+  <button id="out" class="chip" type="button">Sign out</button>
   <button id="theme" class="chip" type="button"></button>
 </header>
 <nav role="tablist" id="tabs">
@@ -236,19 +240,20 @@ let st=null;try{st=localStorage.getItem('rv-theme')}catch(e){}
 setTheme(st||(matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light'));
 $('theme').onclick=()=>setTheme(document.documentElement.dataset.theme==='dark'?'light':'dark');
 let offline=false;const POSTS=[],q=new URLSearchParams(location.search);
-function askLogin(){return new Promise(res=>{$('login').style.display='flex';$('pw').focus();
- const go=async()=>{try{const l=await fetch('/api/login',{method:'POST',credentials:'same-origin',headers:{'Content-Type':'application/json'},body:JSON.stringify({password:$('pw').value})});
-  if(l.ok){$('login').style.display='none';$('pw').value='';$('lerr').textContent='';res()}
-  else $('lerr').textContent=l.status===401?'Wrong password.':'Sign-in is not set up yet (error '+l.status+'). Check the settings in Vercel.'}
+function askLogin(){return new Promise(res=>{let up=false;const L=$('login');L.style.display='flex';$('em').focus();
+ const paint=()=>{$('ltitle').textContent=up?'Create your account':'Sign in';$('go').textContent=up?'Create account':'Sign in';$('lt').textContent=up?'I already have an account':'Create an account';$('lerr').textContent=''};
+ const go=async()=>{try{const l=await fetch(up?'/api/signup':'/api/login',{method:'POST',credentials:'same-origin',headers:{'Content-Type':'application/json'},body:JSON.stringify({email:$('em').value,password:$('pw').value})});
+  if(l.ok){L.style.display='none';$('pw').value='';$('lerr').textContent='';res()}
+  else{let m='';try{m=(await l.json()).error}catch(e){}$('lerr').textContent=m||(l.status>=500?'Sign-in is not set up yet (error '+l.status+'). Finish the setup steps in Vercel.':'Something went wrong.')}}
   catch(e){$('lerr').textContent='Could not reach the server.'}};
- $('go').onclick=go;$('pw').onkeydown=e=>{if(e.key==='Enter')go()}})}
+ $('go').onclick=go;$('lt').onclick=()=>{up=!up;paint()};$('pw').onkeydown=e=>{if(e.key==='Enter')go()};paint()})}
 async function api(u,m,b){const o=()=>({method:m||'GET',credentials:'same-origin',headers:{'Content-Type':'application/json'},body:b?JSON.stringify(b):undefined});
  let r=await fetch(u,o());if(r.status===401){await askLogin();r=await fetch(u,o())}
  const t=await r.text();let d=null;try{d=JSON.parse(t)}catch(e){}
  if(!r.ok||d===null)throw new Error(r.status>=500?'The back end is not set up yet (server error '+r.status+'). Finish the setup steps in Vercel.':'Request failed ('+r.status+')');
  return d}
 async function sync(keep){const s=await api('/api/state');offline=false;BRANDS.length=0;ACC.length=0;POSTS.length=0;
- s.brands.forEach(b=>{BRANDS.push({n:b.name,id:b.id,p:[]});ACC.push(s.accounts.filter(a=>a.brand_id===b.id).map(a=>({id:a.id,pl:a.platform,h:a.handle,st:a.status})));POSTS.push(s.posts.filter(p=>p.brand_id===b.id))});
+ s.brands.forEach(b=>{BRANDS.push({n:b.name+(s.me.admin&&b.owner!==s.me.email?' ('+b.owner+')':''),id:b.id,p:[]});ACC.push(s.accounts.filter(a=>a.brand_id===b.id).map(a=>({id:a.id,pl:a.platform,h:a.handle,st:a.status})));POSTS.push(s.posts.filter(p=>p.brand_id===b.id))});
  bi=Math.min(keep==null?bi:keep,BRANDS.length-1);fillBrands();load(bi)}
 $('view').onclick=async e=>{const b=e.target.closest('button[data-act]');if(!b)return;const act=b.dataset.act,id=b.dataset.id,br=BRANDS[bi];
  try{
@@ -262,6 +267,7 @@ $('view').onclick=async e=>{const b=e.target.closest('button[data-act]');if(!b)r
   if(act==='yes'){await api('/api/accounts?id='+id,'DELETE');await sync();msg='Account removed. Its posts no longer appear in reports.';return render()}
   if(act==='no'||act==='nobrand'){confirmId=null;return render()}
  }catch(err){msg='Something went wrong: '+err.message;render()}};
+$('out').onclick=async()=>{await fetch('/api/logout',{method:'POST',credentials:'same-origin'});location.reload()};
 sync(0).then(()=>{if(q.get('connected'))msg=q.get('connected')+' account linked. Press \u201cRefresh numbers now\u201d to pull its numbers.';if(q.get('error'))msg='Linking failed: '+q.get('error');render()}).catch(e=>{offline=true;msg=e.message;render()});
 </script>
 </body>
