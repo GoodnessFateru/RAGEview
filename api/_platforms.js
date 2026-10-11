@@ -1,6 +1,6 @@
 import crypto from 'crypto';
 import {BASE} from './_lib.js';
-const E=process.env,cb=()=>BASE()+'/api/callback',form=o=>new URLSearchParams(o);
+const E=new Proxy(process.env,{get:(t,k)=>typeof t[k]==='string'?t[k].trim():t[k]}),cb=()=>BASE()+'/api/callback',form=o=>new URLSearchParams(o);
 const j=async(u,o)=>{const r=await fetch(u,o),t=await r.json().catch(()=>({}));
  if(!r.ok)throw new Error(u.split('?')[0].replace('https://','')+' answered '+r.status+(t.error&&t.error.message?': '+t.error.message:''));return t};
 const clip=s=>String(s||'').split('\n')[0].slice(0,70)||'(no text)';
@@ -28,7 +28,7 @@ const YouTube={
 // ---------- Meta: Facebook Pages and Instagram (media views) ----------
 const GV='https://graph.facebook.com/v25.0/';
 const meta={
- auth:s=>'https://www.facebook.com/v25.0/dialog/oauth?'+form({client_id:E.META_APP_ID,redirect_uri:cb(),state:s,scope:'pages_show_list,pages_read_engagement,read_insights,instagram_basic,instagram_manage_insights'}),
+ auth:s=>'https://www.facebook.com/v25.0/dialog/oauth?'+form(E.META_CONFIG_ID?{client_id:E.META_APP_ID,redirect_uri:cb(),state:s,response_type:'code',config_id:E.META_CONFIG_ID}:{client_id:E.META_APP_ID,redirect_uri:cb(),state:s,scope:'pages_show_list,pages_read_engagement,read_insights,instagram_basic,instagram_manage_insights'}),
  async exchange(code,{platform}){
   const t=await j(GV+'oauth/access_token?'+form({client_id:E.META_APP_ID,client_secret:E.META_APP_SECRET,redirect_uri:cb(),code}));
   const l=await j(GV+'oauth/access_token?'+form({grant_type:'fb_exchange_token',client_id:E.META_APP_ID,client_secret:E.META_APP_SECRET,fb_exchange_token:t.access_token}));
