@@ -1,8 +1,11 @@
 import crypto from 'crypto';
 import {BASE} from './_lib.js';
 const E=new Proxy(process.env,{get:(t,k)=>typeof t[k]==='string'?t[k].trim():t[k]}),cb=()=>BASE()+'/api/callback',form=o=>new URLSearchParams(o);
-const j=async(u,o)=>{const r=await fetch(u,o),t=await r.json().catch(()=>({}));
- if(!r.ok)throw new Error(u.split('?')[0].replace('https://','')+' answered '+r.status+(t.error&&t.error.message?': '+t.error.message:''));return t};
+const j=async(u,o)=>{const r=await fetch(u,o),t=await r.json().catch(()=>({})),host=u.split('?')[0].replace('https://','');
+ if(!r.ok)throw new Error(host+' answered '+r.status+(t.error&&t.error.message?': '+t.error.message:''));
+ if(typeof t.error==='string')throw new Error(host+' said '+t.error+(t.error_description?': '+t.error_description:''));
+ if(t.error&&t.error.code&&t.error.code!=='ok')throw new Error(host+' said '+t.error.code+(t.error.message?': '+t.error.message:''));
+ return t};
 const clip=s=>String(s||'').split('\n')[0].slice(0,70)||'(no text)';
 const bearer=t=>({headers:{Authorization:'Bearer '+t}});
 const val=r=>{const m=r&&r.data&&r.data[0];return m?((m.values?m.values[0].value:m.total_value&&m.total_value.value)||0):0};
@@ -96,10 +99,12 @@ const TikTok={
  auth:s=>'https://www.tiktok.com/v2/auth/authorize/?'+form({client_key:E.TIKTOK_CLIENT_KEY,scope:'user.info.basic,video.list',response_type:'code',redirect_uri:cb(),state:s}),
  async exchange(code){
   const t=await j(TT+'oauth/token/',{method:'POST',body:form({client_key:E.TIKTOK_CLIENT_KEY,client_secret:E.TIKTOK_CLIENT_SECRET,code,grant_type:'authorization_code',redirect_uri:cb()})});
+  if(!t.access_token)throw new Error('TikTok did not approve the link ('+(t.error_description||t.error||'no reason given')+'). Check TIKTOK_CLIENT_KEY and TIKTOK_CLIENT_SECRET in Vercel.');
   const u=await j(TT+'user/info/?fields=display_name',bearer(t.access_token));
   return[{id:t.open_id,handle:u.data.user.display_name,secret:t.refresh_token}]},
  async collect(a){
   const t=await j(TT+'oauth/token/',{method:'POST',body:form({client_key:E.TIKTOK_CLIENT_KEY,client_secret:E.TIKTOK_CLIENT_SECRET,grant_type:'refresh_token',refresh_token:a.refresh_token})});
+  if(!t.access_token)throw new Error('TikTok refused the saved login ('+(t.error_description||t.error||'no reason given')+'). Press Reconnect.');
   const d=await j(TT+'video/list/?fields=id,title,create_time,view_count,like_count,comment_count,share_count',{method:'POST',headers:{Authorization:'Bearer '+t.access_token,'Content-Type':'application/json'},body:JSON.stringify({max_count:20})});
   return{secret:t.refresh_token,posts:((d.data||{}).videos||[]).map(v=>({id:v.id,t:clip(v.title),f:'Video',at:new Date(v.create_time*1000).toISOString(),imp:v.view_count||0,eng:(v.like_count||0)+(v.comment_count||0)+(v.share_count||0)}))}}
 };
