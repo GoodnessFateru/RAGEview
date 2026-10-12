@@ -90,7 +90,7 @@ svg text{fill:var(--muted);font-family:inherit;font-size:11px}
   <div id="view"></div>
 </main>
 <script>
-const fmt=n=>n.toLocaleString('en-US');
+const fmt=n=>n.toLocaleString('en-US'),nv=v=>v==null?'–':fmt(v);
 function rng(s){return function(){s|=0;s=s+0x6D2B79F5|0;let t=Math.imul(s^s>>>15,1|s);t=t+Math.imul(t^t>>>7,61|t)^t;return((t^t>>>14)>>>0)/4294967296}}
 const BRANDS=[
  {n:'Your first brand',p:[]},
@@ -138,7 +138,7 @@ function chart(a){
  [1,10,20,30].forEach(d=>s+=`<text x="${m+(d-1)*bw}" y="${H-6}">${d}</text>`);
  return s+'</svg>';
 }
-function totals(ps){const i=ps.reduce((s,p)=>s+p.imp,0),e=ps.reduce((s,p)=>s+p.eng,0);return{i,e,r:i?(e/i*100):0,n:ps.length}}
+function totals(ps){const i=ps.reduce((s,p)=>s+p.imp,0),e=ps.reduce((s,p)=>s+p.eng,0);return{i,e,r:i?(e/i*100):0,n:ps.length,sh:ps.reduce((s,p)=>s+(p.sh||0),0),shAny:ps.some(p=>p.sh!=null)}}
 function best(ps,key){return ps.slice().sort((a,b)=>b[key]-a[key])[0]}
 function sayings(ps){
  if(!ps.length)return['Pick at least one platform above to see how this brand is doing.'];
@@ -148,12 +148,13 @@ function sayings(ps){
  const ad=ps.filter(p=>p.ty==='Ad'),org=ps.filter(p=>p.ty!=='Ad');
  const out=[`“${b.t}” on ${b.pl} (day ${b.d}) got the most impressions: ${fmt(b.imp)}.`,
  `${top[0]} brought in the most views this month, with ${Math.round(top[1]/t.i*100)}% of all impressions.`];
+ const sp=ps.filter(p=>p.sh>0).sort((a,b)=>b.sh-a.sh)[0];if(sp)out.push(`The most shared post was “${sp.t}” on ${sp.pl}, with ${fmt(sp.sh)} shares and reposts.`);
  if(ad.length&&org.length){const ar=totals(ad).r,or=totals(org).r;out.push(ar>or?`Ads are getting more engagement than regular posts (${ar.toFixed(1)}% against ${or.toFixed(1)}%).`:`Regular posts are getting more engagement than ads (${or.toFixed(1)}% against ${ar.toFixed(1)}%). Ads may need a new look.`)}
  return out;
 }
 function posts(ps){
- return `<div class="scroll"><table><thead><tr><th>Day</th><th>Platform</th><th>Type</th><th>Title</th><th class="n">Impressions</th><th class="n">Engagements</th><th class="n">Rate</th></tr></thead><tbody>`+
- ps.slice().sort((a,b)=>b.imp-a.imp).map(p=>`<tr><td>${p.d} Sep</td><td>${p.pl}</td><td>${tg(p)}</td><td>${p.t}</td><td class="n">${fmt(p.imp)}</td><td class="n">${fmt(p.eng)}</td><td class="n">${(p.eng/p.imp*100).toFixed(1)}%</td></tr>`).join('')+`</tbody></table></div>`;
+ return `<div class="scroll"><table><thead><tr><th>Day</th><th>Platform</th><th>Type</th><th>Title</th><th class="n">Impressions</th><th class="n">Likes</th><th class="n">Comments</th><th class="n">Shares and reposts</th><th class="n">Engagements</th><th class="n">Rate</th></tr></thead><tbody>`+
+ ps.slice().sort((a,b)=>b.imp-a.imp).map(p=>`<tr><td>${p.d} Sep</td><td>${p.pl}</td><td>${tg(p)}</td><td>${p.t}</td><td class="n">${fmt(p.imp)}</td><td class="n">${nv(p.lk)}</td><td class="n">${nv(p.cm)}</td><td class="n">${nv(p.sh)}</td><td class="n">${fmt(p.eng)}</td><td class="n">${(p.eng/p.imp*100).toFixed(1)}%</td></tr>`).join('')+`</tbody></table></div>`;
 }
 function brandCard(brand){
  return `<div class="card"><h2>Brands</h2><p class="note">Type a name, then press Add brand for a new brand, or Rename to change the name of ${brand}.</p><input id="newb" placeholder="New brand name" aria-label="New brand name" style="font:inherit;padding:8px 10px;border:1px solid var(--line);border-radius:6px;background:var(--bg);color:var(--text);margin:0 8px 10px 0;display:block;width:100%;max-width:300px"><div class="chips" style="margin:0"><button class="chip" data-act="addbrand">Add brand</button><button class="chip" data-act="rename">Rename this brand</button>${confirmId==='brand'?`<button class="chip" data-act="yesbrand">Yes, remove ${brand}</button> <button class="chip" data-act="nobrand">Cancel</button>`:`<button class="chip" data-act="delbrand">Remove ${brand}</button>`}</div></div>`;
@@ -176,13 +177,13 @@ function formatsView(ps,brand){
  if(avg.length>1)h+=`<div class="card"><h2>What this means</h2><p class="say">${avg[0].f} posts did best for ${brand}, averaging ${fmt(Math.round(avg[0].a))} impressions each.</p><p class="say">${avg[avg.length-1].f} posts did the least, averaging ${fmt(Math.round(avg[avg.length-1].a))}.</p></div>`;
  return h;
 }
-function dtable(v){return `<div class="scroll"><table><thead><tr><th>Type</th><th>Title</th><th class="n">Impressions</th><th class="n">Engagements</th><th class="n">Rate</th></tr></thead><tbody>`+v.slice().sort((a,b)=>b.imp-a.imp).map(p=>`<tr><td>${tg(p)}</td><td>${p.t}</td><td class="n">${fmt(p.imp)}</td><td class="n">${fmt(p.eng)}</td><td class="n">${(p.eng/p.imp*100).toFixed(1)}%</td></tr>`).join('')+`</tbody></table></div>`}
+function dtable(v){return `<div class="scroll"><table><thead><tr><th>Type</th><th>Title</th><th class="n">Impressions</th><th class="n">Likes</th><th class="n">Comments</th><th class="n">Shares and reposts</th><th class="n">Engagements</th><th class="n">Rate</th></tr></thead><tbody>`+v.slice().sort((a,b)=>b.imp-a.imp).map(p=>`<tr><td>${tg(p)}</td><td>${p.t}</td><td class="n">${fmt(p.imp)}</td><td class="n">${nv(p.lk)}</td><td class="n">${nv(p.cm)}</td><td class="n">${nv(p.sh)}</td><td class="n">${fmt(p.eng)}</td><td class="n">${(p.eng/p.imp*100).toFixed(1)}%</td></tr>`).join('')+`</tbody></table></div>`}
 function dailyView(ps,brand){
  const dp=ps.filter(p=>p.d===day),t=totals(dp),by={};
  dp.forEach(p=>(by[p.pl]=by[p.pl]||[]).push(p));
  const opts=Array.from({length:DAYS},(_,k)=>`<option value="${k+1}"${k+1===day?' selected':''}>${k+1} September 2026</option>`).join('');
  let h=`<div class="card"><h2>Daily review</h2><p class="note">Pick a day to see every post made that day, and how well each one did.</p><select id="day" aria-label="Choose a day">${opts}</select></div>`;
- h+=`<div class="kpis"><div class="card kpi"><b>${t.n}</b><small>Posts and ads made</small></div><div class="card kpi"><b>${fmt(t.i)}</b><small>Impressions</small></div><div class="card kpi"><b>${fmt(t.e)}</b><small>Engagements</small></div><div class="card kpi"><b>${t.r.toFixed(1)}%</b><small>Engagement rate</small></div></div>`;
+ h+=`<div class="kpis"><div class="card kpi"><b>${t.n}</b><small>Posts and ads made</small></div><div class="card kpi"><b>${fmt(t.i)}</b><small>Impressions</small></div><div class="card kpi"><b>${fmt(t.e)}</b><small>Engagements</small></div><div class="card kpi"><b>${t.r.toFixed(1)}%</b><small>Engagement rate</small></div><div class="card kpi"><b>${t.shAny?fmt(t.sh):'–'}</b><small>Shares and reposts</small></div></div>`;
  if(dp.length){const b=best(dp,'imp');h+=`<div class="card"><p class="say">${brand} made ${t.n} post${t.n>1?'s':''} on ${day} September. The best was “${b.t}” on ${b.pl}, with ${fmt(b.imp)} impressions.</p></div>`;
   h+=Object.entries(by).map(([k,v])=>`<div class="card"><h2>${brand} on ${k}</h2>${dtable(v)}</div>`).join('')}
  else h+=`<div class="card"><p>${brand} made no posts on ${day} September for the selected platforms.</p></div>`;
@@ -193,20 +194,20 @@ function render(){
  const ps=filtered(),t=totals(ps),brand=BRANDS[bi].n;$('chips').style.display=tab==='accounts'?'none':'flex';
  let h='';
  if(tab==='accounts'){h=accountsView(brand)}else if(tab==='daily'){h=dailyView(ps,brand)}else if(tab==='formats'){h=formatsView(ps,brand)}else if(tab==='overview'){
-  h=`<div class="kpis"><div class="card kpi"><b>${fmt(t.i)}</b><small>Impressions this month</small></div><div class="card kpi"><b>${fmt(t.e)}</b><small>Engagements</small></div><div class="card kpi"><b>${t.r.toFixed(1)}%</b><small>Engagement rate</small></div><div class="card kpi"><b>${t.n}</b><small>Posts and ads</small></div></div>
+  h=`<div class="kpis"><div class="card kpi"><b>${fmt(t.i)}</b><small>Impressions this month</small></div><div class="card kpi"><b>${fmt(t.e)}</b><small>Engagements</small></div><div class="card kpi"><b>${t.r.toFixed(1)}%</b><small>Engagement rate</small></div><div class="card kpi"><b>${t.n}</b><small>Posts and ads</small></div><div class="card kpi"><b>${t.shAny?fmt(t.sh):'–'}</b><small>Shares and reposts</small></div></div>
   <div class="card"><h2>Impressions per day</h2><p class="note">${brand}, ${MONTH}</p>${chart(daily(ps))}</div>
   <div class="card"><h2>What happened</h2>${sayings(ps).map(s=>`<p class="say">${s}</p>`).join('')}</div>`;
  }else if(tab==='posts'){
   h=`<div class="card"><h2>How each post and ad did</h2><p class="note">Sorted from most to fewest impressions.</p>${ps.length?posts(ps):'<p>No posts for the selected platforms.</p>'}</div>`;
  }else if(tab==='timeline'){
   h=`<div class="card"><h2>${brand} timeline</h2><p class="note">Posts, videos and ads in the order they went out. Hollow dots are paid ads.</p><ul class="tl">`+
-  ps.map(p=>`<li class="${p.ty==='Ad'?'ad':''}"><b>${p.t}</b> ${tg(p)}<small>${p.d} Sep on ${p.pl}: ${fmt(p.imp)} impressions, ${fmt(p.eng)} engagements</small></li>`).join('')+`</ul></div>`;
+  ps.map(p=>`<li class="${p.ty==='Ad'?'ad':''}"><b>${p.t}</b> ${tg(p)}<small>${p.d} Sep on ${p.pl}: ${fmt(p.imp)} impressions, ${fmt(p.eng)} engagements, ${nv(p.sh)} shares and reposts</small></li>`).join('')+`</ul></div>`;
  }else{
   const by={};ps.forEach(p=>{(by[p.pl]=by[p.pl]||[]).push(p)});
   h=`<div class="card"><h2>${brand}: ${MONTH}</h2><p class="note">Monthly report, written for the leadership team.</p>
   <p class="say">${brand} reached ${fmt(t.i)} impressions and ${fmt(t.e)} engagements across ${t.n} posts and ads, an engagement rate of ${t.r.toFixed(1)}%.</p>${sayings(ps).map(s=>`<p class="say">${s}</p>`).join('')}</div>
-  <div class="card"><h2>By platform</h2><div class="scroll"><table><thead><tr><th>Platform</th><th class="n">Posts</th><th class="n">Impressions</th><th class="n">Engagements</th><th class="n">Rate</th></tr></thead><tbody>`+
-  Object.entries(by).map(([k,v])=>{const x=totals(v);return`<tr><td>${k}</td><td class="n">${x.n}</td><td class="n">${fmt(x.i)}</td><td class="n">${fmt(x.e)}</td><td class="n">${x.r.toFixed(1)}%</td></tr>`}).join('')+`</tbody></table></div></div>`;
+  <div class="card"><h2>By platform</h2><div class="scroll"><table><thead><tr><th>Platform</th><th class="n">Posts</th><th class="n">Impressions</th><th class="n">Engagements</th><th class="n">Shares and reposts</th><th class="n">Rate</th></tr></thead><tbody>`+
+  Object.entries(by).map(([k,v])=>{const x=totals(v);return`<tr><td>${k}</td><td class="n">${x.n}</td><td class="n">${fmt(x.i)}</td><td class="n">${fmt(x.e)}</td><td class="n">${x.shAny?fmt(x.sh):'–'}</td><td class="n">${x.r.toFixed(1)}%</td></tr>`}).join('')+`</tbody></table></div></div>`;
  }
  $('view').innerHTML=fixM(tab!=='accounts'&&!ACC[bi].length?'<div class="card"><h2>No accounts linked yet</h2><p class="note">Open “Brands &amp; accounts” (top right) and press Connect on a platform to link this brand’s accounts. Numbers appear after the first daily update.</p></div>':h);
 }
