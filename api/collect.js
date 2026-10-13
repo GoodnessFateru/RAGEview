@@ -7,7 +7,7 @@ export default async function h(req,res){
  for(const a of accs){try{
   const r=await P[a.platform].collect(a);
   for(const v of r.posts){
-   const x=await sql`insert into posts(account_id,external_id,title,kind,format,published_at,impressions,engagements,likes,comments,shares) values(${a.id},${String(v.id)},${v.t},'Post',${v.f},${v.at},${v.imp},${v.eng},${v.l??null},${v.c??null},${v.s??null}) on conflict(account_id,external_id) do update set impressions=${v.imp},engagements=${v.eng},likes=${v.l??null},comments=${v.c??null},shares=${v.s??null},title=${v.t} returning id`;
+   const x=await sql`insert into posts(account_id,external_id,title,kind,format,published_at,impressions,engagements,likes,comments,shares,url) values(${a.id},${String(v.id)},${v.t},'Post',${v.f},${v.at},${v.imp},${v.eng},${v.l??null},${v.c??null},${v.s??null},${v.u??null}) on conflict(account_id,external_id) do update set impressions=${v.imp},engagements=${v.eng},likes=${v.l??null},comments=${v.c??null},shares=${v.s??null},url=${v.u??null},title=${v.t} returning id`;
    await sql`insert into snapshots(post_id,day,impressions,engagements) values(${x[0].id},current_date,${v.imp},${v.eng}) on conflict(post_id,day) do update set impressions=${v.imp},engagements=${v.eng}`}
   if(r.posts.length){
    const keep=new Set(r.posts.map(v=>String(v.id))),oldest=r.posts.reduce((m,v)=>v.at<m?v.at:m,r.posts[0].at);

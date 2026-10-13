@@ -49,6 +49,7 @@ svg{width:100%;height:auto;display:block}
 svg text{fill:var(--muted);font-family:inherit;font-size:11px}
 .rect{fill:var(--bar)}
 @media(max-width:560px){main{padding:14px}.kpi b{font-size:24px}}
+main a{color:var(--text);text-decoration:underline}
 </style>
 </head>
 <body>
@@ -82,6 +83,7 @@ svg text{fill:var(--muted);font-family:inherit;font-size:11px}
   <button role="tab" data-t="posts" aria-selected="false">Posts and ads</button>
   <button role="tab" data-t="timeline" aria-selected="false">Brand timeline</button>
   <button role="tab" data-t="report" aria-selected="false">Monthly report</button>
+  <button role="tab" data-t="review" aria-selected="false">Custom review</button>
   
 </nav>
 <main>
@@ -90,7 +92,7 @@ svg text{fill:var(--muted);font-family:inherit;font-size:11px}
   <div id="view"></div>
 </main>
 <script>
-const fmt=n=>n.toLocaleString('en-US'),nv=v=>v==null?'–':fmt(v);
+const fmt=n=>n.toLocaleString('en-US'),nv=v=>v==null?'–':fmt(v),esc=s=>String(s==null?'':s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 function rng(s){return function(){s|=0;s=s+0x6D2B79F5|0;let t=Math.imul(s^s>>>15,1|s);t=t+Math.imul(t^t>>>7,61|t)^t;return((t^t>>>14)>>>0)/4294967296}}
 const BRANDS=[
  {n:'Your first brand',p:[]},
@@ -107,7 +109,7 @@ const live=i=>build(i).filter(p=>ACC[i].some(a=>a.h===p.a&&a.pl===p.pl));
 let confirmId=null,msg='',uid=100,accF='';
 const TITLES={Video:['Launch video','How-to clip','Event highlights'],Design:['Festive promo graphic','New menu design','Anniversary poster'],Carousel:['5 tips carousel','Product range slides','Customer stories slides'],Text:['Weekly update','Quick poll','Team spotlight']};
 const NOW=new Date(),DAYS=new Date(NOW.getFullYear(),NOW.getMonth()+1,0).getDate(),MONTH=NOW.toLocaleString('en',{month:'long',year:'numeric'}),MON=NOW.toLocaleString('en',{month:'long'}),fixM=s=>s.replace(/September 2026/g,MONTH).replace(/September/g,MON).replace(/\b(\d+) Sep\b/g,'$1 '+MON.slice(0,3));
-function build(i){return POSTS[i]||[]}
+function build(i){return (POSTS[i]||[]).filter(p=>{const d=new Date(p.at);return d.getMonth()===NOW.getMonth()&&d.getFullYear()===NOW.getFullYear()})}
 function build0(i){
  const b=BRANDS[i],r=rng(i*977+13),posts=[];if(!b.p.length)return posts;
  for(let k=0;k<26;k++){
@@ -154,7 +156,7 @@ function sayings(ps){
 }
 function posts(ps){
  return `<div class="scroll"><table><thead><tr><th>Day</th><th>Platform</th><th>Type</th><th>Title</th><th class="n">Impressions</th><th class="n">Likes</th><th class="n">Comments</th><th class="n">Shares and reposts</th><th class="n">Engagements</th><th class="n">Rate</th></tr></thead><tbody>`+
- ps.slice().sort((a,b)=>b.imp-a.imp).map(p=>`<tr><td>${p.d} Sep</td><td>${p.pl}</td><td>${tg(p)}</td><td>${p.t}</td><td class="n">${fmt(p.imp)}</td><td class="n">${nv(p.lk)}</td><td class="n">${nv(p.cm)}</td><td class="n">${nv(p.sh)}</td><td class="n">${fmt(p.eng)}</td><td class="n">${(p.eng/p.imp*100).toFixed(1)}%</td></tr>`).join('')+`</tbody></table></div>`;
+ ps.slice().sort((a,b)=>b.imp-a.imp).map(p=>`<tr><td>${p.d} Sep</td><td>${p.pl}</td><td>${tg(p)}</td><td>${tl(p)}</td><td class="n">${fmt(p.imp)}</td><td class="n">${nv(p.lk)}</td><td class="n">${nv(p.cm)}</td><td class="n">${nv(p.sh)}</td><td class="n">${fmt(p.eng)}</td><td class="n">${(p.eng/p.imp*100).toFixed(1)}%</td></tr>`).join('')+`</tbody></table></div>`;
 }
 function brandCard(brand){
  return `<div class="card"><h2>Brands</h2><p class="note">Type a name, then press Add brand for a new brand, or Rename to change the name of ${brand}.</p><input id="newb" placeholder="New brand name" aria-label="New brand name" style="font:inherit;padding:8px 10px;border:1px solid var(--line);border-radius:6px;background:var(--bg);color:var(--text);margin:0 8px 10px 0;display:block;width:100%;max-width:300px"><div class="chips" style="margin:0"><button class="chip" data-act="addbrand">Add brand</button><button class="chip" data-act="rename">Rename this brand</button>${confirmId==='brand'?`<button class="chip" data-act="yesbrand">Yes, remove ${brand}</button> <button class="chip" data-act="nobrand">Cancel</button>`:`<button class="chip" data-act="delbrand">Remove ${brand}</button>`}</div></div>`;
@@ -177,7 +179,7 @@ function formatsView(ps,brand){
  if(avg.length>1)h+=`<div class="card"><h2>What this means</h2><p class="say">${avg[0].f} posts did best for ${brand}, averaging ${fmt(Math.round(avg[0].a))} impressions each.</p><p class="say">${avg[avg.length-1].f} posts did the least, averaging ${fmt(Math.round(avg[avg.length-1].a))}.</p></div>`;
  return h;
 }
-function dtable(v){return `<div class="scroll"><table><thead><tr><th>Type</th><th>Title</th><th class="n">Impressions</th><th class="n">Likes</th><th class="n">Comments</th><th class="n">Shares and reposts</th><th class="n">Engagements</th><th class="n">Rate</th></tr></thead><tbody>`+v.slice().sort((a,b)=>b.imp-a.imp).map(p=>`<tr><td>${tg(p)}</td><td>${p.t}</td><td class="n">${fmt(p.imp)}</td><td class="n">${nv(p.lk)}</td><td class="n">${nv(p.cm)}</td><td class="n">${nv(p.sh)}</td><td class="n">${fmt(p.eng)}</td><td class="n">${(p.eng/p.imp*100).toFixed(1)}%</td></tr>`).join('')+`</tbody></table></div>`}
+function dtable(v){return `<div class="scroll"><table><thead><tr><th>Type</th><th>Title</th><th class="n">Impressions</th><th class="n">Likes</th><th class="n">Comments</th><th class="n">Shares and reposts</th><th class="n">Engagements</th><th class="n">Rate</th></tr></thead><tbody>`+v.slice().sort((a,b)=>b.imp-a.imp).map(p=>`<tr><td>${tg(p)}</td><td>${tl(p)}</td><td class="n">${fmt(p.imp)}</td><td class="n">${nv(p.lk)}</td><td class="n">${nv(p.cm)}</td><td class="n">${nv(p.sh)}</td><td class="n">${fmt(p.eng)}</td><td class="n">${(p.eng/p.imp*100).toFixed(1)}%</td></tr>`).join('')+`</tbody></table></div>`}
 function dailyView(ps,brand){
  const dp=ps.filter(p=>p.d===day),t=totals(dp),by={};
  dp.forEach(p=>(by[p.pl]=by[p.pl]||[]).push(p));
@@ -190,10 +192,51 @@ function dailyView(ps,brand){
  h+=`<div class="card"><h2>All brands on ${day} September</h2><div class="scroll"><table><thead><tr><th>Brand</th><th class="n">Posts</th><th class="n">Impressions</th><th class="n">Engagements</th></tr></thead><tbody>`+BRANDS.map((x,i)=>{if(x.gone)return '';const q=totals(live(i).filter(p=>p.d===day));return`<tr><td>${x.n}</td><td class="n">${q.n}</td><td class="n">${fmt(q.i)}</td><td class="n">${fmt(q.e)}</td></tr>`}).join('')+`</tbody></table></div></div>`;
  return h;
 }
+let rFrom='',rTo='';
+const ymd=d=>d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
+function setPreset(k){const t=new Date(),y=t.getFullYear(),m=t.getMonth();let f=new Date(y,m,1),e=t;
+ if(k==='7')f=new Date(y,m,t.getDate()-6);else if(k==='30')f=new Date(y,m,t.getDate()-29);else if(k==='last'){f=new Date(y,m-1,1);e=new Date(y,m,0)}else if(k==='year')f=new Date(y,0,1);
+ rFrom=ymd(f);rTo=ymd(e)}
+setPreset('month');
+const dshort=(d,yr)=>d.toLocaleDateString('en-GB',{day:'numeric',month:'short'})+(yr?' '+d.getFullYear():'');
+const tl=p=>p.u?`<a href="${p.u}" target="_blank" rel="noopener">${p.t}</a>`:p.t;
+const ln=p=>p.u?` <a href="${p.u}" target="_blank" rel="noopener">Open post &#8599;</a>`:'';
+function liveAll(i){return (POSTS[i]||[]).filter(p=>ACC[i].some(a=>a.h===p.a&&a.pl===p.pl))}
+function rchart(vals,size,f,e){
+ const W=640,H=190,m=26,mx=Math.max(...vals,1),bw=(W-m)/vals.length;
+ let s=`<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Impressions of posts by the day they were published">`;
+ [0,.5,1].forEach(q=>{const y=H-24-(H-44)*q;s+=`<line x1="${m}" x2="${W}" y1="${y}" y2="${y}" stroke="var(--line)"/><text x="0" y="${y+4}">${q?Math.round(mx*q/100)/10+'k':'0'}</text>`});
+ vals.forEach((v,k)=>{const h=(H-44)*v/mx,a=new Date(f.getFullYear(),f.getMonth(),f.getDate()+k*size),b=new Date(f.getFullYear(),f.getMonth(),f.getDate()+k*size+size-1);
+  s+=`<rect class="rect" x="${m+k*bw+1}" y="${H-24-h}" width="${Math.max(bw-2.5,1)}" height="${h}" rx="2"><title>${dshort(a)}${size>1?' to '+dshort(b):''}: ${fmt(v)} impressions</title></rect>`});
+ s+=`<text x="${m}" y="${H-6}">${dshort(f)}</text><text x="${W-60}" y="${H-6}">${dshort(e)}</text>`;
+ return s+'</svg>'}
+function reviewView(brand){
+ const DI='font:inherit;padding:8px 10px;border:1px solid var(--line);border-radius:6px;background:var(--bg);color:var(--text);margin-left:6px';
+ const bar=`<div class="card"><h2>Custom review</h2><p class="note">Choose any start and end date, or pick a quick range.</p><div class="chips" style="margin:0 0 12px"><label style="font-size:13px;font-weight:600">From <input id="rfrom" type="date" value="${rFrom}" style="${DI}"></label><label style="font-size:13px;font-weight:600">To <input id="rto" type="date" value="${rTo}" style="${DI}"></label></div><div class="chips" style="margin:0">${[['7','Last 7 days'],['30','Last 30 days'],['month','This month'],['last','Last month'],['year','This year']].map(([k,l])=>`<button class="chip" data-act="preset" data-p="${k}">${l}</button>`).join('')}</div></div>`;
+ if(!rFrom||!rTo||rFrom>rTo)return bar+'<div class="card"><p>Pick a start date that is on or before the end date.</p></div>';
+ const f=new Date(rFrom+'T00:00:00'),e=new Date(rTo+'T23:59:59.999'),span=`${dshort(f,true)} to ${dshort(new Date(rTo+'T00:00:00'),true)}`;
+ const ps=liveAll(bi).filter(p=>sel.has(p.pl)&&(!accF||accF===p.pl+p.a)).filter(p=>{const d=new Date(p.at);return d>=f&&d<=e}).sort((a,b)=>new Date(b.at)-new Date(a.at));
+ if(!ps.length)return bar+`<div class="card"><h2>${span}</h2><p>No posts found in this range for ${brand}. RAGEview only has the posts it has collected since the account was linked.</p></div>`;
+ const t=totals(ps),sm=k=>ps.some(p=>p[k]!=null)?fmt(ps.reduce((s,p)=>s+(p[k]||0),0)):'\u2013',kp=(v,l)=>`<div class="card kpi"><b>${v}</b><small>${l}</small></div>`;
+ const n=Math.round((new Date(rTo)-new Date(rFrom))/864e5)+1,size=n>92?7:1,vals=Array(Math.ceil(n/size)).fill(0);
+ ps.forEach(p=>{const d=new Date(p.at),di=Math.floor((new Date(d.getFullYear(),d.getMonth(),d.getDate())-f)/864e5);vals[Math.min(Math.floor(di/size),vals.length-1)]+=p.imp});
+ const grp=(key)=>{const o={};ps.forEach(p=>(o[p[key]]=o[p[key]]||[]).push(p));return Object.entries(o).map(([k,v])=>[k,v,totals(v)]).sort((a,b)=>b[2].i-a[2].i)};
+ const byP=grp('pl'),byF=grp('f'),top=ps.slice().sort((a,b)=>b.imp-a.imp)[0];
+ const say=[`The best post was \u201c${top.t}\u201d on ${top.pl}, published ${dshort(new Date(top.at),true)}, with ${fmt(top.imp)} impressions.`,`${byP[0][0]} brought in the most views, with ${Math.round(byP[0][2].i/t.i*100)}% of all impressions.`];
+ if(byF.length>1){const av=byF.map(([k,v,x])=>[k,x.i/v.length]).sort((a,b)=>b[1]-a[1]);say.push(`${av[0][0]} posts did best on average, with ${fmt(Math.round(av[0][1]))} impressions each.`)}
+ const th=h=>`<th class="n">${h}</th>`;
+ let h=bar+`<div class="card"><h2>${span}</h2><p class="note">${brand}: ${ps.length} posts and ads in this range.</p></div>`;
+ h+=`<div class="kpis">${kp(ps.length,'Posts and ads')}${kp(fmt(t.i),'Impressions')}${kp(sm('lk'),'Likes')}${kp(sm('cm'),'Comments')}${kp(sm('sh'),'Shares and reposts')}${kp(fmt(t.e),'Engagements')}${kp(t.r.toFixed(1)+'%','Engagement rate')}</div>`;
+ h+=`<div class="card"><h2>Impressions by publishing day</h2><p class="note">${size>1?'Each bar is one week.':'Each bar is one day.'} Shows the total impressions of the posts published in that period.</p>${rchart(vals,size,f,new Date(rTo+'T00:00:00'))}</div>`;
+ h+=`<div class="card"><h2>What happened</h2>${say.map(x=>`<p class="say">${x}</p>`).join('')}</div>`;
+ h+=`<div class="card"><h2>By platform</h2><div class="scroll"><table><thead><tr><th>Platform</th>${th('Posts')}${th('Impressions')}${th('Engagements')}${th('Shares and reposts')}</tr></thead><tbody>${byP.map(([k,v,x])=>`<tr><td>${k}</td><td class="n">${x.n}</td><td class="n">${fmt(x.i)}</td><td class="n">${fmt(x.e)}</td><td class="n">${x.shAny?fmt(x.sh):'\u2013'}</td></tr>`).join('')}</tbody></table></div></div>`;
+ h+=`<div class="card"><h2>By format</h2><div class="scroll"><table><thead><tr><th>Format</th>${th('Posts')}${th('Impressions')}${th('Average per post')}</tr></thead><tbody>${byF.map(([k,v,x])=>`<tr><td><span class="tag">${k}</span></td><td class="n">${x.n}</td><td class="n">${fmt(x.i)}</td><td class="n">${fmt(Math.round(x.i/x.n))}</td></tr>`).join('')}</tbody></table></div></div>`;
+ h+=`<div class="card"><h2>Every post in this range</h2><p class="note">Newest first. Click a title to open the post.</p><div class="scroll"><table><thead><tr><th>Date</th><th>Platform</th><th>Type</th><th>Title</th>${th('Impressions')}${th('Likes')}${th('Comments')}${th('Shares and reposts')}${th('Engagements')}</tr></thead><tbody>${ps.map(p=>`<tr><td>${dshort(new Date(p.at),n>300)}</td><td>${p.pl}</td><td>${tg(p)}</td><td>${tl(p)}</td><td class="n">${fmt(p.imp)}</td><td class="n">${nv(p.lk)}</td><td class="n">${nv(p.cm)}</td><td class="n">${nv(p.sh)}</td><td class="n">${fmt(p.eng)}</td></tr>`).join('')}</tbody></table></div></div>`;
+ return h}
 function render(){
  const ps=filtered(),t=totals(ps),brand=BRANDS[bi].n;$('chips').style.display=tab==='accounts'?'none':'flex';
  let h='';
- if(tab==='accounts'){h=accountsView(brand)}else if(tab==='daily'){h=dailyView(ps,brand)}else if(tab==='formats'){h=formatsView(ps,brand)}else if(tab==='overview'){
+ if(tab==='accounts'){h=accountsView(brand)}else if(tab==='review'){h=reviewView(brand)}else if(tab==='daily'){h=dailyView(ps,brand)}else if(tab==='formats'){h=formatsView(ps,brand)}else if(tab==='overview'){
   h=`<div class="kpis"><div class="card kpi"><b>${fmt(t.i)}</b><small>Impressions this month</small></div><div class="card kpi"><b>${fmt(t.e)}</b><small>Engagements</small></div><div class="card kpi"><b>${t.r.toFixed(1)}%</b><small>Engagement rate</small></div><div class="card kpi"><b>${t.n}</b><small>Posts and ads</small></div><div class="card kpi"><b>${t.shAny?fmt(t.sh):'–'}</b><small>Shares and reposts</small></div></div>
   <div class="card"><h2>Impressions per day</h2><p class="note">${brand}, ${MONTH}</p>${chart(daily(ps))}</div>
   <div class="card"><h2>What happened</h2>${sayings(ps).map(s=>`<p class="say">${s}</p>`).join('')}</div>`;
@@ -201,7 +244,7 @@ function render(){
   h=`<div class="card"><h2>How each post and ad did</h2><p class="note">Sorted from most to fewest impressions.</p>${ps.length?posts(ps):'<p>No posts for the selected platforms.</p>'}</div>`;
  }else if(tab==='timeline'){
   h=`<div class="card"><h2>${brand} timeline</h2><p class="note">Posts, videos and ads in the order they went out. Hollow dots are paid ads.</p><ul class="tl">`+
-  ps.map(p=>`<li class="${p.ty==='Ad'?'ad':''}"><b>${p.t}</b> ${tg(p)}<small>${p.d} Sep on ${p.pl}: ${fmt(p.imp)} impressions, ${fmt(p.eng)} engagements, ${nv(p.sh)} shares and reposts</small></li>`).join('')+`</ul></div>`;
+  ps.map(p=>`<li class="${p.ty==='Ad'?'ad':''}"><b>${tl(p)}</b> ${tg(p)}<small>${p.d} Sep on ${p.pl}: ${fmt(p.imp)} impressions, ${fmt(p.eng)} engagements, ${nv(p.sh)} shares and reposts</small>${ln(p)}</li>`).join('')+`</ul></div>`;
  }else{
   const by={};ps.forEach(p=>{(by[p.pl]=by[p.pl]||[]).push(p)});
   h=`<div class="card"><h2>${brand}: ${MONTH}</h2><p class="note">Monthly report, written for the leadership team.</p>
@@ -209,7 +252,7 @@ function render(){
   <div class="card"><h2>By platform</h2><div class="scroll"><table><thead><tr><th>Platform</th><th class="n">Posts</th><th class="n">Impressions</th><th class="n">Engagements</th><th class="n">Shares and reposts</th><th class="n">Rate</th></tr></thead><tbody>`+
   Object.entries(by).map(([k,v])=>{const x=totals(v);return`<tr><td>${k}</td><td class="n">${x.n}</td><td class="n">${fmt(x.i)}</td><td class="n">${fmt(x.e)}</td><td class="n">${x.shAny?fmt(x.sh):'–'}</td><td class="n">${x.r.toFixed(1)}%</td></tr>`}).join('')+`</tbody></table></div></div>`;
  }
- $('view').innerHTML=fixM(tab!=='accounts'&&!ACC[bi].length?'<div class="card"><h2>No accounts linked yet</h2><p class="note">Open “Brands &amp; accounts” (top right) and press Connect on a platform to link this brand’s accounts. Numbers appear after the first daily update.</p></div>':h);
+ $('view').innerHTML=(tab==='review'?x=>x:fixM)(tab!=='accounts'&&!ACC[bi].length?'<div class="card"><h2>No accounts linked yet</h2><p class="note">Open “Brands &amp; accounts” (top right) and press Connect on a platform to link this brand’s accounts. Numbers appear after the first daily update.</p></div>':h);
 }
 function chips(){
  $('chips').innerHTML=plats(bi).map(p=>`<button class="chip" data-p="${p}" aria-pressed="${sel.has(p)}">${p}</button>`).join('')+(ACC[bi].length>1?`<select id="accf" aria-label="Filter by account" style="min-width:0;padding:5px 10px;font-size:13px"><option value="">All accounts</option>`+ACC[bi].map(a=>`<option value="${a.pl}${a.h}"${accF===a.pl+a.h?' selected':''}>${a.h} (${a.pl})</option>`).join('')+`</select>`:'');
@@ -236,7 +279,7 @@ $('view').onclick=e=>{const b=e.target.closest('button[data-act]');if(!b)return;
  else if(act==='yes'){const a=A.find(x=>x.id===id);ACC[bi]=A.filter(x=>x.id!==id);confirmId=null;msg=`${a.h} on ${a.pl} was removed. Its posts no longer appear in reports.`}
  else if(act==='rec'){A.find(x=>x.id===id).st='Connected';msg='Account reconnected.'}
  accF='';sel=new Set(plats(bi));chips();render()};
-$('view').onchange=e=>{if(e.target.id==='day'){day=+e.target.value;render()}};
+$('view').onchange=e=>{if(e.target.id==='day'){day=+e.target.value;render()}else if(e.target.id==='rfrom'){rFrom=e.target.value;render()}else if(e.target.id==='rto'){rTo=e.target.value;render()}};
 function setTheme(t){document.documentElement.dataset.theme=t;$('theme').textContent=t==='dark'?'Switch to light view':'Switch to dark view';try{localStorage.setItem('rv-theme',t)}catch(e){}}
 let st=null;try{st=localStorage.getItem('rv-theme')}catch(e){}
 setTheme(st||(matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light'));
@@ -255,11 +298,12 @@ async function api(u,m,b){const o=()=>({method:m||'GET',credentials:'same-origin
  if(!r.ok||d===null)throw new Error(r.status>=500?'The back end is not set up yet (server error '+r.status+'). Finish the setup steps in Vercel.':'Request failed ('+r.status+')');
  return d}
 async function sync(keep){const s=await api('/api/state');offline=false;BRANDS.length=0;ACC.length=0;POSTS.length=0;
- s.brands.forEach(b=>{BRANDS.push({n:b.name+(s.me.admin&&b.owner!==s.me.email?' ('+b.owner+')':''),id:b.id,p:[]});ACC.push(s.accounts.filter(a=>a.brand_id===b.id).map(a=>({id:a.id,pl:a.platform,h:a.handle,st:a.status})));POSTS.push(s.posts.filter(p=>p.brand_id===b.id))});
+ s.brands.forEach(b=>{BRANDS.push({n:esc(b.name+(s.me.admin&&b.owner!==s.me.email?' ('+b.owner+')':'')),id:b.id,p:[]});ACC.push(s.accounts.filter(a=>a.brand_id===b.id).map(a=>({id:a.id,pl:a.platform,h:esc(a.handle),st:a.status})));POSTS.push(s.posts.filter(p=>p.brand_id===b.id).map(p=>({...p,t:esc(p.t),a:esc(p.a),d:new Date(p.at).getDate(),u:/^https?:\/\//.test(p.u||'')?esc(p.u):''})))});
  bi=Math.min(keep==null?bi:keep,BRANDS.length-1);fillBrands();load(bi)}
 $('view').onclick=async e=>{const b=e.target.closest('button[data-act]');if(!b)return;const act=b.dataset.act,id=b.dataset.id,br=BRANDS[bi];
  try{
   if(act==='add'||act==='rec'){if(offline){msg='The back end is not ready yet, so accounts cannot be linked. Finish the setup steps in Vercel first.';return render()}const pl=act==='rec'?ACC[bi].find(x=>x.id==id).pl:b.dataset.pl;location.href='/api/connect?platform='+encodeURIComponent(pl)+'&brand='+br.id;return}
+  if(act==='preset'){setPreset(b.dataset.p);return render()}
   if(act==='refresh'){msg='Refreshing numbers...';render();const r=await api('/api/collect?now=1');await sync();msg=r.errors&&r.errors.length?'Some accounts could not be read: '+r.errors.map(x=>x.platform+' ('+x.msg+')').join('; '):'Numbers refreshed.';return render()}
   if(act==='addbrand'){const n=$('newb').value.trim();if(!n){msg='Type a brand name first.';return render()}await api('/api/brands','POST',{name:n});await sync(BRANDS.length);msg=n+' added. Now connect its accounts below.';return render()}
   if(act==='rename'){const n=$('newb').value.trim();if(!n){msg='Type the new name first.';return render()}await api('/api/brands','PATCH',{id:br.id,name:n});await sync();msg='Brand renamed.';return render()}

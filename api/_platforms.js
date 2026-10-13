@@ -26,7 +26,7 @@ const YouTube={
   const up=(await g('channels?part=contentDetails&id='+a.external_id)).items[0].contentDetails.relatedPlaylists.uploads;
   const ids=((await g('playlistItems?part=contentDetails&maxResults=50&playlistId='+up)).items||[]).map(i=>i.contentDetails.videoId).join(',');
   const vs=ids?((await g('videos?part=snippet,statistics&id='+ids)).items||[]):[];
-  return{posts:vs.map(v=>({id:v.id,t:clip(v.snippet.title),f:'Video',at:v.snippet.publishedAt,imp:+v.statistics.viewCount||0,eng:(+v.statistics.likeCount||0)+(+v.statistics.commentCount||0),l:+v.statistics.likeCount||0,c:+v.statistics.commentCount||0,s:null}))}}
+  return{posts:vs.map(v=>({id:v.id,t:clip(v.snippet.title),f:'Video',at:v.snippet.publishedAt,u:'https://www.youtube.com/watch?v='+v.id,imp:+v.statistics.viewCount||0,eng:(+v.statistics.likeCount||0)+(+v.statistics.commentCount||0),l:+v.statistics.likeCount||0,c:+v.statistics.commentCount||0,s:null}))}}
 };
 
 // ---------- Meta: Facebook Pages and Instagram (media views) ----------
@@ -41,17 +41,17 @@ const meta={
 };
 const mg=(a,p)=>j(GV+p+(p.includes('?')?'&':'?')+'access_token='+a.refresh_token);
 const Facebook={...meta,async collect(a){
- const d=await mg(a,a.external_id+'/posts?limit=25&fields=id,message,created_time,attachments{media_type},reactions.summary(true).limit(0),comments.summary(true).limit(0),shares');
+ const d=await mg(a,a.external_id+'/posts?limit=25&fields=id,message,created_time,permalink_url,attachments{media_type},reactions.summary(true).limit(0),comments.summary(true).limit(0),shares');
  return{posts:await Promise.all((d.data||[]).map(async x=>{
   let imp=0;try{imp=val(await mg(a,x.id+'/insights?metric=post_media_view'))}catch{}
   const l=((x.reactions||{}).summary||{}).total_count||0,c=((x.comments||{}).summary||{}).total_count||0,s=(x.shares||{}).count||0;
   const mt=(x.attachments&&x.attachments.data&&x.attachments.data[0]&&x.attachments.data[0].media_type)||'';
-  return{id:x.id,t:clip(x.message),f:mt.startsWith('video')?'Video':mt==='photo'?'Design':mt==='album'?'Carousel':'Text',at:x.created_time,imp,eng:l+c+s,l,c,s}}))}}};
+  return{id:x.id,t:clip(x.message),f:mt.startsWith('video')?'Video':mt==='photo'?'Design':mt==='album'?'Carousel':'Text',at:x.created_time,u:x.permalink_url,imp,eng:l+c+s,l,c,s}}))}}};
 const Instagram={...meta,async collect(a){
- const d=await mg(a,a.external_id+'/media?limit=25&fields=id,caption,timestamp,media_type,like_count,comments_count');
+ const d=await mg(a,a.external_id+'/media?limit=25&fields=id,caption,timestamp,permalink,media_type,like_count,comments_count');
  return{posts:await Promise.all((d.data||[]).map(async x=>{
   let imp=0,s=null;try{const r=await mg(a,x.id+'/insights?metric=views,shares');imp=named(r,'views')||0;s=named(r,'shares')}catch{try{imp=val(await mg(a,x.id+'/insights?metric=views'))}catch{}}
-  return{id:x.id,t:clip(x.caption),f:x.media_type==='VIDEO'?'Video':x.media_type==='CAROUSEL_ALBUM'?'Carousel':'Design',at:x.timestamp,imp,eng:(x.like_count||0)+(x.comments_count||0),l:x.like_count||0,c:x.comments_count||0,s}}))}}};
+  return{id:x.id,t:clip(x.caption),f:x.media_type==='VIDEO'?'Video':x.media_type==='CAROUSEL_ALBUM'?'Carousel':'Design',at:x.timestamp,u:x.permalink,imp,eng:(x.like_count||0)+(x.comments_count||0),l:x.like_count||0,c:x.comments_count||0,s}}))}}};
 
 // ---------- LinkedIn (company Pages) ----------
 const LH=tk=>({headers:{Authorization:'Bearer '+tk,'LinkedIn-Version':E.LINKEDIN_VERSION||'202606','X-Restli-Protocol-Version':'2.0.0'}});
@@ -76,7 +76,7 @@ const LinkedIn={
   const st=await j('https://api.linkedin.com/rest/organizationalEntityShareStatistics?q=organizationalEntity&organizationalEntity='+enc(urn)+list('share')+list('ugcPost'),LH(tk));
   const m={};(st.elements||[]).forEach(e=>m[e.share||e.ugcPost]=e.totalShareStatistics||{});
   return{secret,posts:ps.map(p=>{const s=m[p.id]||{},c=p.content||{};
-   return{id:p.id,t:clip(p.commentary),f:c.multiImage?'Carousel':c.media?((c.media.id||'').includes('video')?'Video':'Design'):'Text',at:new Date(p.publishedAt||p.createdAt).toISOString(),imp:s.impressionCount||0,eng:(s.likeCount||0)+(s.commentCount||0)+(s.shareCount||0)+(s.clickCount||0),l:s.likeCount||0,c:s.commentCount||0,s:s.shareCount||0}})}}
+   return{id:p.id,t:clip(p.commentary),f:c.multiImage?'Carousel':c.media?((c.media.id||'').includes('video')?'Video':'Design'):'Text',at:new Date(p.publishedAt||p.createdAt).toISOString(),u:'https://www.linkedin.com/feed/update/'+p.id,imp:s.impressionCount||0,eng:(s.likeCount||0)+(s.commentCount||0)+(s.shareCount||0)+(s.clickCount||0),l:s.likeCount||0,c:s.commentCount||0,s:s.shareCount||0}})}}
 };
 
 // ---------- X ----------
@@ -92,7 +92,7 @@ const X={
   const d=await j('https://api.x.com/2/users/'+a.external_id+'/tweets?max_results=50&exclude=retweets,replies&tweet.fields=created_at,public_metrics,attachments&expansions=attachments.media_keys&media.fields=type',bearer(t.access_token));
   const mt={};((d.includes||{}).media||[]).forEach(m=>mt[m.media_key]=m.type);
   return{secret:t.refresh_token,posts:(d.data||[]).map(x=>{const k=(x.attachments||{}).media_keys||[],m=x.public_metrics;
-   return{id:x.id,t:clip(x.text),f:k.length>1?'Carousel':k.length?(mt[k[0]]==='photo'?'Design':'Video'):'Text',at:x.created_at,imp:m.impression_count||0,eng:m.like_count+m.reply_count+m.retweet_count+m.quote_count,l:m.like_count,c:m.reply_count,s:m.retweet_count+m.quote_count}})}}
+   return{id:x.id,t:clip(x.text),f:k.length>1?'Carousel':k.length?(mt[k[0]]==='photo'?'Design':'Video'):'Text',at:x.created_at,u:'https://x.com/i/status/'+x.id,imp:m.impression_count||0,eng:m.like_count+m.reply_count+m.retweet_count+m.quote_count,l:m.like_count,c:m.reply_count,s:m.retweet_count+m.quote_count}})}}
 };
 
 // ---------- TikTok ----------
@@ -108,7 +108,7 @@ const TikTok={
  async collect(a){
   const t=await j(TT+'oauth/token/',{method:'POST',body:form({client_key:E.TIKTOK_CLIENT_KEY,client_secret:E.TIKTOK_CLIENT_SECRET,grant_type:'refresh_token',refresh_token:a.refresh_token})});
   if(!t.access_token)throw new Error('TikTok refused the saved login ('+(t.error_description||t.error||'no reason given')+'). Press Reconnect.');
-  const d=await j(TT+'video/list/?fields=id,title,create_time,view_count,like_count,comment_count,share_count',{method:'POST',headers:{Authorization:'Bearer '+t.access_token,'Content-Type':'application/json'},body:JSON.stringify({max_count:20})}).catch(e=>{throw new Error(e.message+' (permissions granted: '+(t.scope||'unknown')+')')});
-  return{secret:t.refresh_token,posts:((d.data||{}).videos||[]).map(v=>({id:v.id,t:clip(v.title),f:'Video',at:new Date(v.create_time*1000).toISOString(),imp:v.view_count||0,eng:(v.like_count||0)+(v.comment_count||0)+(v.share_count||0),l:v.like_count||0,c:v.comment_count||0,s:v.share_count||0}))}}
+  const d=await j(TT+'video/list/?fields=id,title,create_time,view_count,like_count,comment_count,share_count,share_url',{method:'POST',headers:{Authorization:'Bearer '+t.access_token,'Content-Type':'application/json'},body:JSON.stringify({max_count:20})}).catch(e=>{throw new Error(e.message+' (permissions granted: '+(t.scope||'unknown')+')')});
+  return{secret:t.refresh_token,posts:((d.data||{}).videos||[]).map(v=>({id:v.id,t:clip(v.title),f:'Video',at:new Date(v.create_time*1000).toISOString(),u:v.share_url,imp:v.view_count||0,eng:(v.like_count||0)+(v.comment_count||0)+(v.share_count||0),l:v.like_count||0,c:v.comment_count||0,s:v.share_count||0}))}}
 };
 export const P={YouTube,Facebook,Instagram,LinkedIn,X,TikTok};
